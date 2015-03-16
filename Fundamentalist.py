@@ -1,4 +1,5 @@
 __author__ = 'Radu'
+import numpy
 
 class Fundamentalist(object):
     phi = 0.18
@@ -14,6 +15,6 @@ class Fundamentalist(object):
 
     def getDemand(self,p_t):
 
-        demand = self.phi * ( self.getPf() - p_t) * epsilon_t
+        demand = self.phi * ( self.getPf() - p_t)
 
-
+    print (numpy.random.normal(0,sigma_f))
