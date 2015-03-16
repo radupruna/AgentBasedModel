@@ -15,5 +15,5 @@ class Fundamentalist(object):
 
     def getDemand(self,p_t):
         epsilon_f = numpy.random.normal(0,self.sigma_f)
-        demand = self.phi * (self.getPf() - p_t) * epsilon_f
+        demand = self.phi * (self.getPf() - p_t) + epsilon_f
         return demand
