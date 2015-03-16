@@ -3,3 +3,4 @@ import Fundamentalist
 import Chartist
 
 class Program:
+    pass
