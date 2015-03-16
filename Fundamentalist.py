@@ -1,7 +1,7 @@
 __author__ = 'Radu'
 import numpy
 
-class Fundamentalist(object):
+class Fundamentalist:
     phi = 0.18
     sigma_f = 0.79
     def __init__(self, p_f):

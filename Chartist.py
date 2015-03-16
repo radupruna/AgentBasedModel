@@ -1,7 +1,7 @@
 __author__ = 'Radu'
 import numpy
 
-class Chartist(object):
+class Chartist:
     chi = 2.35
     sigma_c = 1.91
 
