@@ -10,8 +10,8 @@ class Fundamentalist(object):
     def getPf(self):
         return self.p_f
 
-    def setPf(self,p):
-        self.p_f=p
+    def setPf(self,p_f):
+        self.p_f=p_f
 
     def getDemand(self,p_t):
         epsilon_f = numpy.random.normal(0,self.sigma_f)
