@@ -10,3 +10,5 @@ class Chartist:
         epsilon_c = numpy.random.normal(0,self.sigma_c)
         demand = self.chi * (p_1 - p_0) + epsilon_c
         return demand
+
+
