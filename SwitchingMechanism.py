@@ -16,3 +16,4 @@ import Chartist
             a_t = alpha_0 + alpha_n*(self.nf[-1]-self.nc[-1]) + alpha_p * (self.fundamentalist.getPf()
 
         def updateFractions(self,a_t):
+            pass
