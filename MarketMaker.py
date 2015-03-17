@@ -2,6 +2,7 @@ __author__ = 'Radu'
 from Fundamentalist import Fundamentalist
 from Chartist import Chartist
 import math
+import matplotlib.pyplot as plt
 
 class MarketMaker:
     pf = 0
@@ -53,22 +54,21 @@ class MarketMaker:
 
     def updatePrice(self):
         nu = 0.01
+        self.updateDemands()
         a = self.getAttractLvl(self.pf,self.pt[-1])
         self.updateFractions(a)
-        self.updateDemands()
-
-        noiseTerm = self.fund.epsilon_f
-
-        price = self.pt[-1] + nu * (self.dc[-1] * self.nc[-1] + self.df[-1] * self.nf[-1])
-        print (noiseTerm)
+        noiseTerm = self.fund.epsilon_f * self.nf[-1] + self.chart.epsilon_c * self.nc[-1]
+        price = self.pt[-1] + nu * ( self.dc[-1] * self.nc[-1] + self.df[-1] * self.nf[-1] ) + noiseTerm
+        self.pt.append(price)
 
 
-MM= MarketMaker(0,0.12,14.12,0.7,0.3)
-print (MM.fund.epsilon_f)
-print (MM.pt)
-print ("Demand F: ", MM.getDemandF())
-print ("Demand C: ",MM.getDemandC())
-print ("NC: ", MM.getNc())
-print ("NF: ",MM.getNf())
-
-MM.updatePrice()
+MM= MarketMaker(0,0.1,0.3,0.7,0.3)
+for i in range(1000):
+    MM.updatePrice()
+print("Demand C: ",MM.dc)
+print("Demand F: ", MM.df)
+print("NC: ",MM.nc)
+print("NF: ", MM.nf)
+print("Price: ",MM.pt)
+plt.plot(MM.nf)
+plt.show()
