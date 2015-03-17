@@ -13,7 +13,7 @@ class Fundamentalist:
     def setPf(self,p_f):
         self.p_f=p_f
 
-    def getDemand(self,p_t):
-        epsilon_f = numpy.random.normal(0,self.sigma_f)
-        demand = self.phi * (self.getPf() - p_t) + epsilon_f
+    def getDemand(self,p):
+        epsilon_f_t = numpy.random.normal(0,self.sigma_f)
+        demand = self.phi * (self.getPf() - p[-1]) + epsilon_f_t
         return demand
