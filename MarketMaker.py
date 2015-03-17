@@ -16,10 +16,10 @@ class MarketMaker:
     sm = SwitchingMechanism
 
     def __init__(self,pf,p_0,p_1,nf_0, nc_0):
-        self.pt[0] = p_0
-        self.pt[1] = p_1
-        self.nf[0] = nf_0
-        self.nc[0] =nc_0
+        self.pt.append(p_0)
+        self.pt.append(p_1)
+        self.nf.append(nf_0)
+        self.nc.append(nc_0)
         fund = Fundamentalist(pf)
         chart = Chartist(p_0, p_1)
         sm = SwitchingMechanism(nf_0,nc_0)
