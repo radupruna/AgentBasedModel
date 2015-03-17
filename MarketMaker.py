@@ -36,5 +36,5 @@ class MarketMaker:
         return self.df[-1]
 
 
-MM= MarketMaker(0,-0.3,-0.4,0.7,0.3)
+MM= MarketMaker(0,0.3,0.4,0.7,0.3)
 print (MM.getDemandC())
