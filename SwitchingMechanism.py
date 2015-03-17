@@ -3,8 +3,7 @@ import Fundamentalist
 import Chartist
     class SwitchingMechanism:
         fundamentalist = Fundamentalist(0)
-        nf=[]
-        nc=[]
+
         def __init__(self,n_f,n_c):
             self.nf[0]=n_f
             self.nc[0]=n_c

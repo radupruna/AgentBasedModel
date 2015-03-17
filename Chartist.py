@@ -5,9 +5,6 @@ class Chartist:
     chi = 2.35
     sigma_c = 1.91
 
-    mm = MarketMaker(0,0.1)
-    p_t = mm.p_t
-
     def __int__(self,p0,p1):
         self.p_t[0]=p0
         self.p_t[1]=p1
