@@ -12,14 +12,14 @@ class Chartist:
     def setP_0(self,p_0):
         self.p_0 = p_0
     def getP0(self):
-        return self.p0
+        return self.p_0
 
     def setP_1(self,p_1):
         self.p_1=p_1
     def getP1(self):
-        return self.p1
+        return self.p_1
 
     def getDemand(self,pt):
         epsilon_c_t = numpy.random.normal(0,self.sigma_c)
-        demand = self.chi * (p[-2] - p[-1]) + epsilon_c_t
+        demand = self.chi * (pt[-2] - pt[-1]) + epsilon_c_t
         return demand
