@@ -4,20 +4,37 @@ import Chartist
 import SwitchingMechanism
 
 class MarketMaker:
-    pt = []
+    pf = 0
+    pt=[]
+    nf=[]
+    nc=[]
+    df = []
+    dc = []
+
     fund = Fundamentalist
-    chart = Chartist
+    chart= Chartist
     sm = SwitchingMechanism
-    nf=sm.nf
-    nc=sm.nc
 
-    def __init__(self,pf,p0,p1,n_f, n_c):
-        self.pf = pf
-        self.pt[0] = p0
-        self.pt[1] = p1
-        self.nf[0] = n_f
-        self.nc[0] =n_c
+    def __init__(self,pf,p_0,p_1,nf_0, nc_0):
+        self.pt[0] = p_0
+        self.pt[1] = p_1
+        self.nf[0] = nf_0
+        self.nc[0] =nc_0
         fund = Fundamentalist(pf)
-        chart = Chartist(p0, p1)
-        sm = SwitchingMechanism(n_f,n_c)
+        chart = Chartist(p_0, p_1)
+        sm = SwitchingMechanism(nf_0,nc_0)
+        self.nf=sm.nf
+        self.nc=sm.nc
 
+    def setDemands(self):
+        self.df.append(self.fund.getDemand(self.pt))
+        self.dc.append(self.chart.getDemand(self.pt))
+
+    def getDemandC(self):
+        return self.dc[-1]
+    def getDemantF(self):
+        return self.df[-1]
+
+
+MM= MarketMaker(0,-0.3,-0.4,0.7,0.3)
+print (MM.getDemandC())
