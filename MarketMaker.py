@@ -1,7 +1,7 @@
 __author__ = 'Radu'
-import Fundamentalist
-import Chartist
-import SwitchingMechanism
+from Fundamentalist import Fundamentalist
+from Chartist import Chartist
+from SwitchingMechanism import SwitchingMechanism
 
 class MarketMaker:
     pf = 0

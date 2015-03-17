@@ -5,7 +5,7 @@ class Chartist:
     chi = 2.35
     sigma_c = 1.91
 
-    def __int__(self,p_0,p_11):
+    def __int__(self,p_0,p_1):
         self.p_0=p_0
         self.p_1=p_1
 
