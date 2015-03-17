@@ -5,8 +5,8 @@ class SwitchingMechanism:
     nc=[]
 
     def __init__(self,n_f,n_c):
-        self.nf[0]=n_f
-        self.nc[0]=n_c
+        self.nf.append(n_f)
+        self.nc.append(n_c)
 
     def getAttractLvl(self,p_f,p_t):
         alpha_0 = -0.15

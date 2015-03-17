@@ -21,7 +21,7 @@ class MarketMaker:
         self.nf.append(nf_0)
         self.nc.append(nc_0)
         fund = Fundamentalist(pf)
-        chart = Chartist(p_0, p_1)
+        chart = Chartist()
         sm = SwitchingMechanism(nf_0,nc_0)
         self.nf=sm.nf
         self.nc=sm.nc
@@ -32,9 +32,10 @@ class MarketMaker:
 
     def getDemandC(self):
         return self.dc[-1]
-    def getDemantF(self):
+    def getDemandF(self):
         return self.df[-1]
 
 
 MM= MarketMaker(0,0.3,0.4,0.7,0.3)
+MM.setDemands()
 print (MM.getDemandC())
