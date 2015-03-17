@@ -5,9 +5,6 @@ class Chartist:
     chi = 2.35
     sigma_c = 1.91
 
-    def __int__(self,p_0,p_1):
-        pass
-
     def getDemand(self,pt):
         epsilon_c_t = numpy.random.normal(0,self.sigma_c)
         demand = self.chi * (pt[-2] - pt[-1]) + epsilon_c_t
