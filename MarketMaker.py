@@ -21,14 +21,15 @@ class MarketMaker:
         self.fund = Fundamentalist(pf)
         self.chart = Chartist()
 
-    def setDemands(self):
+    def updateDemands(self):
         self.df.append( self.fund.getDemand(self.pt) )
         self.dc.append( self.chart.getDemand(self.pt) )
 
     def getDemandC(self):
-        return self.dc[-1]
+        return self.dc
+
     def getDemandF(self):
-        return self.df[-1]
+        return self.df
 
     def getAttractLvl(self,p_f,p_t):
         alpha_0 = -0.15
@@ -50,19 +51,24 @@ class MarketMaker:
     def getNc(self):
         return self.nc
 
-
     def updatePrice(self):
         nu = 0.01
-        price = self.pt[-1] + nu * (self.dc[-1] * self.nc[-1] + self.df[-1] * self.nf[-1]) +
+        a = self.getAttractLvl(self.pf,self.pt[-1])
+        self.updateFractions(a)
+        self.updateDemands()
+
+        noiseTerm = self.fund.epsilon_f
+
+        price = self.pt[-1] + nu * (self.dc[-1] * self.nc[-1] + self.df[-1] * self.nf[-1])
+        print (noiseTerm)
 
 
 MM= MarketMaker(0,0.12,14.12,0.7,0.3)
-for i in range(5000):
-    MM.setDemands()
-    MM.updateFractions(MM.getAttractLvl(MM.pf,MM.pt[-2]))
-
+print (MM.fund.epsilon_f)
 print (MM.pt)
 print ("Demand F: ", MM.getDemandF())
 print ("Demand C: ",MM.getDemandC())
 print ("NC: ", MM.getNc())
 print ("NF: ",MM.getNf())
+
+MM.updatePrice()

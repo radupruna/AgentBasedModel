@@ -6,11 +6,8 @@ class Chartist:
     sigma_c = 1.91
     epsilon_c = 0
 
-    def randomNoise(self):
-        return numpy.random.normal(0,self.sigma_c)
-
     def getDemand(self,pt):
-        self.epsilon_c = self.randomNoise()
+        self.epsilon_c = numpy.random.normal(0,self.sigma_c)
         demand = self.chi * (pt[-1] - pt[-2]) + self.epsilon_c
         return demand
 
