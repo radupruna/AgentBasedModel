@@ -66,8 +66,9 @@ class MarketMaker:
         price = self.pt[-1] + nu*(self.dc[-1]*self.nc[-1] + self.df[-1]*self.nf[-1])
         self.pt.append(price)
 
-MM= MarketMaker(0,0.151234,0.146115,0.6,0.4)
-for i in range(2000):
+MM= MarketMaker(0,0.151234,0.146115,0.7,0.3)
+
+for i in range(6000):
     MM.updatePrice()
 
 plt.figure(1)
@@ -87,8 +88,8 @@ plt.plot(MM.xt)
 plt.title("Majority Index")
 
 plt.figure(5)
-plt.plot(MM.noise)
-plt.title("Noise Index")
+plt.plot(MM.nf)
+plt.title("Nf")
 
 plt.figure(6)
 plt.plot(MM.attract)
