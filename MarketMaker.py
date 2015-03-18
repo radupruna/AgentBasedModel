@@ -1,7 +1,7 @@
 __author__ = 'Radu'
 from Fundamentalist import Fundamentalist
 from Chartist import Chartist
-import math
+import numpy
 import matplotlib.pyplot as plt
 
 class MarketMaker:
@@ -9,8 +9,11 @@ class MarketMaker:
     pt=[]
     nf=[]
     nc=[]
+    xt=[]
     df = []
     dc = []
+    attract=[]
+    noise=[]
     fund = Fundamentalist
     chart= Chartist
 
@@ -19,6 +22,7 @@ class MarketMaker:
         self.pt.append(p_1)
         self.nf.append(nf_0)
         self.nc.append(nc_0)
+        self.xt.append(nf_0-nc_0)
         self.fund = Fundamentalist(pf)
         self.chart = Chartist()
 
@@ -32,19 +36,20 @@ class MarketMaker:
     def getDemandF(self):
         return self.df
 
-    def getAttractLvl(self,p_f,p_t):
+    def getAttractLvl(self,p_f,x_t,p_t):
         alpha_0 = -0.15
         alpha_n = 1.35
         alpha_p = 11.40
-        a_t = alpha_0 + alpha_n*(self.nf[-1]-self.nc[-1]) + alpha_p * (p_t - p_f)**2
+        a_t = alpha_0 + alpha_n*x_t + alpha_p *(p_t - p_f)
         return a_t
 
     def updateFractions(self,a_t):
-        b = 1
-        n_f = 1 / (1 + math.exp( -b * a_t))
+        b = 1.00
+        n_f = 1 /(1+numpy.exp(-b*a_t))
         n_c = 1 - n_f
         self.nf.append(n_f)
         self.nc.append(n_c)
+        self.xt.append(n_f-n_c)
 
     def getNf(self):
         return self.nf
@@ -55,20 +60,38 @@ class MarketMaker:
     def updatePrice(self):
         nu = 0.01
         self.updateDemands()
-        a = self.getAttractLvl(self.pf,self.pt[-1])
+        a = self.getAttractLvl(self.pf,self.xt[-1],self.pt[-1])
+        self.attract.append(a)
         self.updateFractions(a)
-        noiseTerm = self.fund.epsilon_f * self.nf[-1] + self.chart.epsilon_c * self.nc[-1]
-        price = self.pt[-1] + nu * ( self.dc[-1] * self.nc[-1] + self.df[-1] * self.nf[-1] ) + noiseTerm
+        price = self.pt[-1] + nu*(self.dc[-1]*self.nc[-1] + self.df[-1]*self.nf[-1])
         self.pt.append(price)
 
-
-MM= MarketMaker(0,0.1,0.3,0.7,0.3)
-for i in range(1000):
+MM= MarketMaker(0,0.151234,0.146115,0.6,0.4)
+for i in range(2000):
     MM.updatePrice()
-print("Demand C: ",MM.dc)
-print("Demand F: ", MM.df)
-print("NC: ",MM.nc)
-print("NF: ", MM.nf)
-print("Price: ",MM.pt)
-plt.plot(MM.nf)
+
+plt.figure(1)
+plt.plot(MM.dc)
+plt.title("Demand C")
+
+plt.figure(2)
+plt.plot(MM.df)
+plt.title("Demand F")
+
+plt.figure(3)
+plt.plot(MM.pt)
+plt.title("Price")
+
+plt.figure(4)
+plt.plot(MM.xt)
+plt.title("Majority Index")
+
+plt.figure(5)
+plt.plot(MM.noise)
+plt.title("Noise Index")
+
+plt.figure(6)
+plt.plot(MM.attract)
+plt.title("Attractiveness Index")
+
 plt.show()
