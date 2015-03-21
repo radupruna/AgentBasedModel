@@ -88,7 +88,7 @@ for i in range(3000):
     MM.update_price()
 
 print ('Kurtosis: ',sts.kurtosis(MM.price_t, fisher=False))
-print ('Skewness: ',sts.skew(MM.price_t))
+print ('Skewness: ',sts.skew(MM.price_t) )
 
 plt.figure()
 plt.plot(MM.price_t)
