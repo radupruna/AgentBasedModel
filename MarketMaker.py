@@ -5,15 +5,16 @@ import numpy
 import matplotlib.pyplot as plt
 
 class MarketMaker:
-    pf = 0
-    pt=[]
-    nf=[]
-    nc=[]
-    xt=[]
-    df = []
-    dc = []
-    attract=[]
-    noise=[]
+    pf = 0  #Fundamental price
+    pt=[]   #Price series
+    nf=[]   #Market Fraction of Fundamentalists
+    nc=[]   #Market Fraction of Technical Analysts
+    xt=[]   #Majority index
+    df=[]   #Demands of Fundamentalists
+    dc=[]   #Demands of Chartists
+    attract=[]  #Attractiveness Levels
+    rt=[]   #Returns
+
     fund = Fundamentalist
     chart= Chartist
 
@@ -23,6 +24,8 @@ class MarketMaker:
         self.nf.append(nf_0)
         self.nc.append(nc_0)
         self.xt.append(nf_0-nc_0)
+        self.rt.append(100*(p_1-p_0))
+
         self.fund = Fundamentalist(pf)
         self.chart = Chartist()
 
@@ -65,10 +68,11 @@ class MarketMaker:
         self.updateFractions(a)
         price = self.pt[-1] + nu*(self.dc[-1]*self.nc[-1] + self.df[-1]*self.nf[-1])
         self.pt.append(price)
+        self.rt.append(100*(self.pt[-1]-self.pt[-2]))
 
 MM= MarketMaker(0,0.151234,0.146115,0.7,0.3)
 
-for i in range(6000):
+for i in range(8830):
     MM.updatePrice()
 
 plt.figure(1)
@@ -81,10 +85,12 @@ plt.title("Demand F")
 
 plt.figure(3)
 plt.plot(MM.pt)
+plt.axhline(0, color='black',ls='dotted', lw=1)
 plt.title("Price")
 
 plt.figure(4)
 plt.plot(MM.xt)
+plt.axhline(0, color='black',ls='dotted', lw=1)
 plt.title("Majority Index")
 
 plt.figure(5)
@@ -95,4 +101,7 @@ plt.figure(6)
 plt.plot(MM.attract)
 plt.title("Attractiveness Index")
 
+plt.figure(7)
+plt.plot(MM.rt)
+plt.title("Returns")
 plt.show()
