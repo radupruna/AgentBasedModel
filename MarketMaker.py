@@ -80,7 +80,7 @@ plt.figure(1)
 plt.plot(MM.dc)
 plt.title("Demand C")
 
-plt.figure(2);;;
+plt.figure(2)
 plt.plot(MM.df)
 plt.title("Demand F")
 
