@@ -7,6 +7,9 @@
         <list>
           <option value="numpy.random.normal" />
           <option value="numpy.exp" />
+          <option value="numpy.sqrt" />
+          <option value="numpy.subtract" />
+          <option value="numpy.log" />
         </list>
       </option>
     </inspection_tool>

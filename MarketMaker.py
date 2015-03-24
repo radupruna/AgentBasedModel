@@ -75,11 +75,12 @@ MM= MarketMaker(0,0.151234,0.146115,0.7,0.3)
 for i in range(8830):
     MM.updatePrice()
 
+
 plt.figure(1)
 plt.plot(MM.dc)
 plt.title("Demand C")
 
-plt.figure(2)
+plt.figure(2);;;
 plt.plot(MM.df)
 plt.title("Demand F")
 
