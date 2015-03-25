@@ -5,7 +5,7 @@ import scipy.stats as sts
 from scipy.optimize import curve_fit
 import time
 import powerlaw.powerlaw as powerlaw
-
+from statsmodels.tsa import stattools as tsast
 
 
 class Chartist:
@@ -215,66 +215,87 @@ def dist_compare():
     R_pw_exp = numpy.median(R_pw_exps)
     index = R_pw_exps.index(R_pw_exp)
     p_pw_exp = p_pw_exps[index]
+    p_pw_exp1 = numpy.median(p_pw_exps)
+
 
     R_pw_log = numpy.median(R_pw_logs)
     index = R_pw_logs.index(R_pw_log)
     p_pw_1og = p_pw_1ogs[index]
+    p_pw_1og1 = numpy.median(p_pw_1ogs)
 
     R_pw_tr = numpy.median(R_pw_trs)
     index = R_pw_trs.index(R_pw_tr)
     p_pw_tr = p_pw_trs[index]
+    p_pw_tr1 = numpy.median(p_pw_trs)
 
     R_pw_sr = numpy.median(R_pw_srs)
     index = R_pw_srs.index(R_pw_sr)
     p_pw_sr = p_pw_srs[index]
+    p_pw_sr1 = numpy.median(p_pw_srs)
 
     R_exp_log = numpy.median(R_exp_logs)
     index = R_exp_logs.index(R_exp_log)
     p_exp_log = p_exp_logs[index]
+    p_exp_log1 = numpy.median(p_exp_logs)
 
     R_exp_tr = numpy.median(R_exp_trs)
     index = R_exp_trs.index(R_exp_tr)
     p_exp_tr = p_exp_trs[index]
+    p_exp_tr1 = numpy.median(p_exp_trs)
 
     R_exp_sr = numpy.median(R_exp_srs)
     index = R_exp_srs.index(R_exp_sr)
     p_exp_sr = p_exp_srs[index]
+    p_exp_sr1 = numpy.median(p_exp_srs)
 
     R_log_tr = numpy.median(R_log_trs)
     index = R_log_trs.index(R_log_tr)
     p_log_tr = p_log_trs[index]
+    p_log_tr1 = numpy.median(p_log_trs)
 
     R_log_sr = numpy.median(R_log_srs)
     index = R_log_srs.index(R_log_sr)
     p_log_sr = p_log_srs[index]
+    p_log_sr1 = numpy.median(p_log_srs)
 
     R_tr_sr = numpy.median(R_tr_srs)
     index = R_tr_srs.index(R_tr_sr)
     p_tr_sr = p_tr_srs[index]
+    p_tr_sr1 = numpy.median(p_tr_srs)
 
     print('R_pw_exp: ', R_pw_exp)
     print('p_pw_exp: ', p_pw_exp)
+    print('p_pw_exp1: ', p_pw_exp1)
     print('R_pw_log: ', R_pw_log)
     print('p_pw_1og: ', p_pw_1og)
+    print('p_pw_1og1: ', p_pw_1og1)
     print('R_pw_tr: ', R_pw_tr)
     print('p_pw_tr: ', p_pw_tr)
+    print('p_pw_tr1: ', p_pw_tr1)
     print('R_pw_sr: ', R_pw_sr)
     print('p_pw_sr: ', p_pw_sr)
+    print('p_pw_sr1: ', p_pw_sr1)
 
     print('R_exp_log: ', R_exp_log)
     print('p_exp_log: ', p_exp_log)
+    print('p_exp_log1: ', p_exp_log1)
     print('R_exp_tr: ', R_exp_tr)
     print('p_exp_tr: ', p_exp_tr)
+    print('p_exp_tr1: ', p_exp_tr1)
     print('R_exp_sr: ', R_exp_sr)
     print('p_exp_sr: ', p_exp_sr)
+    print('p_exp_sr1: ', p_exp_sr1)
 
     print('R_log_tr: ', R_log_tr)
     print('p_log_tr: ', p_log_tr)
+    print('p_log_tr1: ', p_log_tr1)
     print('R_log_sr: ', R_log_sr)
     print('p_log_sr: ', p_log_sr)
+    print('p_log_sr1: ', p_log_sr1)
 
     print('R_tr_sr: ', R_tr_sr)
     print('p_tr_sr: ', p_tr_sr)
+    print('p_tr_sr1: ', p_tr_sr1)
 
 def kurt_skew():
     kurt=[]
@@ -310,12 +331,30 @@ def power_fitting_time():
     print('covar: ', covar)
     print('error:', err)
 
-# t0 = time.time()
-# kurt_skew()
-# t1 = time.time()
-# total = t1 - t0
-# print('time: ', total)
+def autocorrelation_function():
+    MM=MarketMaker(0, 0, 0.5, 0.5)
+    for i in range(5*5999):
+        MM.update_price()
+    abs_returns = [abs(x) for x in MM.return_t]
+    a = tsast.acf(abs_returns,nlags=99)
+    b= tsast.acf(MM.return_t,nlags=99)
 
+
+    plt.figure()
+    plt.ylim(-0.1,0.3)
+    plt.plot(a,label='abs returns')
+    plt.plot(b, label='raw returns')
+    plt.title('Autocorrelation function')
+    plt.xlabel('lags')
+    plt.ylabel('autocorrelation')
+
+t0 = time.time()
+autocorrelation_function()
+t1 = time.time()
+total = t1 - t0
+print('time: ', total)
+plt.legend()
+plt.show()
 # MM = MarketMaker(0, 0, 0.5, 0.5)
 #
 # for i in range(5998):
