@@ -2,7 +2,11 @@ __author__ = 'Radu'
 import numpy
 import matplotlib.pyplot as plt
 import scipy.stats as sts
+from scipy.optimize import curve_fit
+import time
 import powerlaw.powerlaw as powerlaw
+
+
 
 class Chartist:
     chi = 1.50
@@ -28,20 +32,18 @@ class Fundamentalist:
 
 
 class MarketMaker:
-    pf = 0  # Fundamental price
-    price_t = []  # Price series
-    nf = []  # Market Fraction of Fundamentalists
-    nc = []  # Market Fraction of Technical Analysts
-    x_t = []  # Majority index
-    df = []  # Demands of Fundamentalists
-    dc = []  # Demands of Chartists
-    attract = []  # Attractiveness Levels
-    return_t = []  # Returns
-
-    fund = Fundamentalist
-    chart = Chartist
 
     def __init__(self, p_0, p_1, nf_0, nc_0):
+        self.pf = 0  # Fundamental price
+        self.price_t = []  # Price series
+        self.nf = []  # Market Fraction of Fundamentalists
+        self.nc = []  # Market Fraction of Technical Analysts
+        self.x_t = []  # Majority index
+        self.df = []  # Demands of Fundamentalists
+        self.dc = []  # Demands of Chartists
+        self.attract = []  # Attractiveness Levels
+        self.return_t = []  # Returns
+
         self.price_t.append(p_0)
         self.price_t.append(p_1)
         self.nf.append(nf_0)
@@ -112,48 +114,54 @@ def hill(pt):
 
 
 def dist_compare():
-    xmins=[]
-    alphas=[]
-    sigmas=[]
-    Ds=[]
+    """Pairwise comparisons between power_law, exponential, lognormal, truncated_power_law, stretched_exponential distributions"""
+    xmins = []
+    alphas = []
+    sigmas = []
+    Ds = []
 
-    R_pw_exps=[]
-    p_pw_exps=[]
-    R_pw_logs=[]
-    p_pw_1ogs=[]
-    R_pw_trs=[]
-    p_pw_trs=[]
-    R_pw_srs=[]
-    p_pw_srs=[]
+    R_pw_exps = []
+    p_pw_exps = []
+    R_pw_logs = []
+    p_pw_1ogs = []
+    R_pw_trs = []
+    p_pw_trs = []
+    R_pw_srs = []
+    p_pw_srs = []
 
-    R_exp_logs=[]
-    p_exp_logs=[]
-    R_exp_trs=[]
-    p_exp_trs=[]
-    R_exp_srs=[]
-    p_exp_srs=[]
+    R_exp_logs = []
+    p_exp_logs = []
+    R_exp_trs = []
+    p_exp_trs = []
+    R_exp_srs = []
+    p_exp_srs = []
 
-    R_log_trs=[]
-    p_log_trs=[]
-    R_log_srs=[]
-    p_log_srs=[]
+    R_log_trs = []
+    p_log_trs = []
+    R_log_srs = []
+    p_log_srs = []
 
-    R_tr_srs=[]
-    p_tr_srs=[]
+    R_tr_srs = []
+    p_tr_srs = []
 
-    for i in range(10):
+
+    for j in range(501):
         MM = MarketMaker(0, 0, 0.5, 0.5)
-
-        for i in range(5998):
+        print('Iteration: ',j)
+        for i in range(5999):
             MM.update_price()
 
-        # Fit a power law distribution
-        fit=powerlaw.Fit(MM.return_t)
+        # Calculate absolute returns
+        abs_returns = [abs(x) for x in MM.return_t]
+
+        # Fit a power law distribution to absolute returns
+        fit = powerlaw.Fit(abs_returns)
         # Calculating best minimal value for power law fit
-        xmin=fit.xmin
-        alpha=fit.power_law.alpha
-        sigma=fit.power_law.sigma
-        D=fit.power_law.D
+
+        xmin = fit.xmin
+        alpha = fit.power_law.alpha
+        sigma = fit.power_law.sigma
+        D = fit.power_law.D
 
         xmins.append(xmin)
         alphas.append(alpha)
@@ -165,85 +173,160 @@ def dist_compare():
         R_pw_tr, p_pw_tr = fit.distribution_compare('power_law', 'truncated_power_law')
         R_pw_sr, p_pw_sr = fit.distribution_compare('power_law', 'stretched_exponential')
 
-        R_pw_exps.append(R_pw_exp)
-        p_pw_exps.append(p_pw_exp)
-        R_pw_logs.append(R_pw_log)
-        p_pw_1ogs.append(p_pw_1og)
-        R_pw_trs.append(R_pw_tr)
-        p_pw_trs.append(p_pw_tr)
-        R_pw_srs.append(R_pw_sr)
-        p_pw_srs.append(p_pw_sr)
+        R_pw_exps.append(float("{0:.4f}".format(R_pw_exp)))
+        p_pw_exps.append(float("{0:.4f}".format(p_pw_exp)))
+        R_pw_logs.append(float("{0:.4f}".format(R_pw_log)))
+        p_pw_1ogs.append(float("{0:.4f}".format(p_pw_1og)))
+        R_pw_trs.append(float("{0:.4f}".format(R_pw_tr)))
+        p_pw_trs.append(float("{0:.4f}".format(p_pw_tr)))
+        R_pw_srs.append(float("{0:.4f}".format(R_pw_sr)))
+        p_pw_srs.append(float("{0:.4f}".format(p_pw_sr)))
 
         R_exp_log, p_exp_log = fit.distribution_compare('exponential', 'lognormal')
         R_exp_tr, p_exp_tr = fit.distribution_compare('exponential', 'truncated_power_law')
         R_exp_sr, p_exp_sr = fit.distribution_compare('exponential', 'stretched_exponential')
 
-        R_exp_logs.append(R_exp_log)
-        p_exp_logs.append(p_exp_log)
-        R_exp_trs.append(R_exp_tr)
-        p_exp_trs.append(p_exp_tr)
-        R_exp_srs.append(R_exp_sr)
-        p_exp_srs.append(p_exp_sr)
+        R_exp_logs.append(float("{0:.4f}".format(R_exp_log)))
+        p_exp_logs.append(float("{0:.4f}".format(p_exp_log)))
+        R_exp_trs.append(float("{0:.4f}".format(R_exp_tr)))
+
+        p_exp_trs.append(float("{0:.4f}".format(p_exp_tr)))
+        R_exp_srs.append(float("{0:.4f}".format(R_exp_sr)))
+        p_exp_srs.append(float("{0:.4f}".format(p_exp_sr)))
 
         R_log_tr, p_log_tr = fit.distribution_compare('lognormal', 'truncated_power_law')
         R_log_sr, p_log_sr = fit.distribution_compare('lognormal', 'stretched_exponential')
 
-        R_log_trs.append(R_log_tr)
-        p_log_trs.append(p_log_tr)
-        R_log_srs.append(R_log_sr)
-        p_log_srs.append(p_log_sr)
+        R_log_trs.append(float("{0:.4f}".format(R_log_tr)))
+        p_log_trs.append(float("{0:.4f}".format(p_log_tr)))
+        R_log_srs.append(float("{0:.4f}".format(R_log_sr)))
+        p_log_srs.append(float("{0:.4f}".format(p_log_sr)))
 
         R_tr_sr, p_tr_sr = fit.distribution_compare('truncated_power_law', 'stretched_exponential')
 
-        R_tr_srs.append(R_tr_sr)
-        p_tr_srs.append(p_tr_sr)
+        R_tr_srs.append(float("{0:.4f}".format(R_tr_sr)))
+        p_tr_srs.append(float("{0:.4f}".format(p_tr_sr)))
 
-    print ('xmin: ',numpy.median(xmins))
-    print ('alpha: ',numpy.median(alphas))
-    print ('sigma: ',numpy.median(sigmas))
-    print ('D: ',numpy.median(Ds))
+    print('xmin: ', numpy.median(xmins))
+    print('alpha: ', numpy.median(alphas))
+    print('sigma: ', numpy.median(sigmas))
+    print('D: ', numpy.median(Ds))
 
-    R_pw_exp=numpy.median(R_pw_exps)
-    p_pw_exp=p_pw_exps[R_pw_exps.index(R_pw_exp)]
-    R_pw_log=numpy.median(R_pw_logs)
-    p_pw_1og=p_pw_1ogs[R_pw_logs.index(R_pw_log)]
-    R_pw_tr=numpy.median(R_pw_trs)
-    p_pw_tr=p_pw_trs[R_pw_trs.index(R_pw_tr)]
-    R_pw_sr=numpy.median(R_pw_srs)
-    p_pw_sr=p_pw_srs[R_pw_srs.index(R_pw_sr)]
+    R_pw_exp = numpy.median(R_pw_exps)
+    index = R_pw_exps.index(R_pw_exp)
+    p_pw_exp = p_pw_exps[index]
 
-    R_log_tr=numpy.median(R_log_trs)
-    p_log_tr=p_log_trs[R_log_trs.index(R_log_tr)]
-    R_log_sr=numpy.median(R_log_srs)
-    p_log_sr=p_log_srs[R_log_srs.index(R_log_sr)]
+    R_pw_log = numpy.median(R_pw_logs)
+    index = R_pw_logs.index(R_pw_log)
+    p_pw_1og = p_pw_1ogs[index]
 
-    R_tr_sr=numpy.median(R_tr_srs)
-    p_tr_sr=p_tr_srs[R_tr_srs.index(R_tr_sr)]
+    R_pw_tr = numpy.median(R_pw_trs)
+    index = R_pw_trs.index(R_pw_tr)
+    p_pw_tr = p_pw_trs[index]
 
-    print ('R_pw_exp: ',R_pw_exp)
-    print ('p_pw_exp: ',p_pw_exp)
-    print ('R_pw_log: ',R_pw_log)
-    print ('p_pw_1og: ',p_pw_1og)
-    print ('R_pw_tr: ',R_pw_tr)
-    print ('p_pw_tr: ',p_pw_tr)
-    print ('R_pw_sr: ',R_pw_sr)
-    print ('p_pw_sr: ',p_pw_sr)
+    R_pw_sr = numpy.median(R_pw_srs)
+    index = R_pw_srs.index(R_pw_sr)
+    p_pw_sr = p_pw_srs[index]
 
-    print ('R_log_tr: ',R_log_tr)
-    print ('p_log_tr: ',p_log_tr)
-    print ('R_log_sr: ',R_log_sr)
-    print ('p_log_sr: ',p_log_sr)
+    R_exp_log = numpy.median(R_exp_logs)
+    index = R_exp_logs.index(R_exp_log)
+    p_exp_log = p_exp_logs[index]
 
-    print ('R_tr_sr: ',R_tr_sr)
-    print ('p_tr_sr: ',p_tr_sr)
+    R_exp_tr = numpy.median(R_exp_trs)
+    index = R_exp_trs.index(R_exp_tr)
+    p_exp_tr = p_exp_trs[index]
 
-dist_compare()
+    R_exp_sr = numpy.median(R_exp_srs)
+    index = R_exp_srs.index(R_exp_sr)
+    p_exp_sr = p_exp_srs[index]
+
+    R_log_tr = numpy.median(R_log_trs)
+    index = R_log_trs.index(R_log_tr)
+    p_log_tr = p_log_trs[index]
+
+    R_log_sr = numpy.median(R_log_srs)
+    index = R_log_srs.index(R_log_sr)
+    p_log_sr = p_log_srs[index]
+
+    R_tr_sr = numpy.median(R_tr_srs)
+    index = R_tr_srs.index(R_tr_sr)
+    p_tr_sr = p_tr_srs[index]
+
+    print('R_pw_exp: ', R_pw_exp)
+    print('p_pw_exp: ', p_pw_exp)
+    print('R_pw_log: ', R_pw_log)
+    print('p_pw_1og: ', p_pw_1og)
+    print('R_pw_tr: ', R_pw_tr)
+    print('p_pw_tr: ', p_pw_tr)
+    print('R_pw_sr: ', R_pw_sr)
+    print('p_pw_sr: ', p_pw_sr)
+
+    print('R_exp_log: ', R_exp_log)
+    print('p_exp_log: ', p_exp_log)
+    print('R_exp_tr: ', R_exp_tr)
+    print('p_exp_tr: ', p_exp_tr)
+    print('R_exp_sr: ', R_exp_sr)
+    print('p_exp_sr: ', p_exp_sr)
+
+    print('R_log_tr: ', R_log_tr)
+    print('p_log_tr: ', p_log_tr)
+    print('R_log_sr: ', R_log_sr)
+    print('p_log_sr: ', p_log_sr)
+
+    print('R_tr_sr: ', R_tr_sr)
+    print('p_tr_sr: ', p_tr_sr)
+
+def kurt_skew():
+    kurt=[]
+    skewness=[]
+
+    for j in range(10000):
+        MM=MarketMaker(0, 0, 0.5, 0.5)
+        print('iteration', j)
+        for i in range(5999):
+            MM.update_price()
+        kurt.append(sts.kurtosis(MM.return_t))
+        skewness.append(sts.skew(MM.return_t))
+    print('Kurtosis: ', float("{0:.4f}".format(numpy.median(kurt))))
+    print('Skewness: ', float("{0:.4f}".format(numpy.median(skewness))))
+
+def power_fitting_time():
+    # Abs Returns as a function of time assumes return = a* time**b
+    # pars = Optimal values for the parameters so that the sum of the squared error of f(xdata, *pars) - ydata is minimized
+    # covar = the estimated covariance of pars. The diagonals provide the variance of the parameter estimate.
+    # err = compute one standard deviation errors (scaled) on the parameters u.
+    def powerlaw(x,a,b):
+        return a*(x**b)
+    MM=MarketMaker(0, 0, 0.5, 0.5)
+    for i in range(5999):
+        MM.update_price()
+    t=numpy.linspace(0,5999,6000)
+
+    abs_returns = [abs(x) for x in MM.return_t]
+    pars,covar =  curve_fit(powerlaw,t,abs_returns)
+    err = numpy.sqrt(numpy.diag(covar))
+
+    print('pars: ', pars)
+    print('covar: ', covar)
+    print('error:', err)
+
+# t0 = time.time()
+# kurt_skew()
+# t1 = time.time()
+# total = t1 - t0
+# print('time: ', total)
 
 # MM = MarketMaker(0, 0, 0.5, 0.5)
 #
 # for i in range(5998):
 #     MM.update_price()
-#
+# abs_returns = [abs(x) for x in MM.return_t]
+# plt.figure()
+# plt.subplot(2, 1, 1)
+# plt.plot(MM.return_t)
+# plt.subplot(2, 1, 2)
+# plt.plot(abs_returns)
+# plt.show()
 # # Fit a power law distribution
 # fit=powerlaw.Fit(MM.return_t)
 # # Calculating best minimal value for power law fit
