@@ -145,7 +145,7 @@ def dist_compare():
     p_tr_srs = []
 
 
-    for j in range(501):
+    for j in range(1001):
         MM = MarketMaker(0, 0, 0.5, 0.5)
         print('Iteration: ',j)
         for i in range(5999):
@@ -337,7 +337,7 @@ def autocorrelation_function():
         MM.update_price()
     abs_returns = [abs(x) for x in MM.return_t]
     a = tsast.acf(abs_returns,nlags=99)
-    b= tsast.acf(MM.return_t,nlags=99)
+    b = tsast.acf(MM.return_t,nlags=99)
 
 
     plt.figure()
@@ -349,7 +349,7 @@ def autocorrelation_function():
     plt.ylabel('autocorrelation')
 
 t0 = time.time()
-autocorrelation_function()
+dist_compare()
 t1 = time.time()
 total = t1 - t0
 print('time: ', total)
