@@ -5,8 +5,8 @@ import scipy.stats as sts
 from scipy.optimize import curve_fit
 import time
 import powerlaw.powerlaw as powerlaw
-from statsmodels.tsa import stattools as tsast
 
+from statsmodels.tsa import stattools as tsast
 
 class Chartist:
     chi = 1.50
@@ -17,7 +17,6 @@ class Chartist:
         self.epsilon_c = numpy.random.normal(0, self.sigma_c)
         demand = self.chi * (pt[-1] - pt[-2]) + self.epsilon_c
         return demand
-
 
 class Fundamentalist:
     phi = 0.12
@@ -30,9 +29,7 @@ class Fundamentalist:
         demand = self.phi * (self.p_f - pt[-1]) + self.epsilon_f
         return demand
 
-
 class MarketMaker:
-
     def __init__(self, p_0, p_1, nf_0, nc_0):
         self.pf = 0  # Fundamental price
         self.price_t = []  # Price series
@@ -84,7 +81,6 @@ class MarketMaker:
         self.price_t.append(price)
         self.return_t.append(100 * (self.price_t[-1] - self.price_t[-2]))
 
-
 def hurst(ts):
     """Returns the Hurst Exponent of the time series vector ts"""
     # Create the range of lag values
@@ -99,21 +95,7 @@ def hurst(ts):
     # Return the Hurst exponent from the polyfit output
     return poly[0] * 2.0
 
-
-def hill(pt):
-    """Returns the Hill Tail index of the price series vector ts"""
-    a = sorted(pt)
-    n = len(a) - 1
-    h = []
-    for k in range(1, 500):
-        s = 0
-        for j in range(2, k):
-            s = s + (numpy.log(a[n - j + 1]) - numpy.log(a[n - k]))
-        h.append(s / k)
-    return h
-
-
-def dist_compare():
+def distibution_compare():
     """Pairwise comparisons between power_law, exponential, lognormal, truncated_power_law, stretched_exponential distributions"""
     xmins = []
     alphas = []
@@ -144,10 +126,9 @@ def dist_compare():
     R_tr_srs = []
     p_tr_srs = []
 
-
     for j in range(1001):
         MM = MarketMaker(0, 0, 0.5, 0.5)
-        print('Iteration: ',j)
+        print('Iteration: ', j)
         for i in range(5999):
             MM.update_price()
 
@@ -216,7 +197,6 @@ def dist_compare():
     index = R_pw_exps.index(R_pw_exp)
     p_pw_exp = p_pw_exps[index]
     p_pw_exp1 = numpy.median(p_pw_exps)
-
 
     R_pw_log = numpy.median(R_pw_logs)
     index = R_pw_logs.index(R_pw_log)
@@ -298,11 +278,11 @@ def dist_compare():
     print('p_tr_sr1: ', p_tr_sr1)
 
 def kurt_skew():
-    kurt=[]
-    skewness=[]
+    kurt = []
+    skewness = []
 
     for j in range(10000):
-        MM=MarketMaker(0, 0, 0.5, 0.5)
+        MM = MarketMaker(0, 0, 0.5, 0.5)
         print('iteration', j)
         for i in range(5999):
             MM.update_price()
@@ -316,15 +296,16 @@ def power_fitting_time():
     # pars = Optimal values for the parameters so that the sum of the squared error of f(xdata, *pars) - ydata is minimized
     # covar = the estimated covariance of pars. The diagonals provide the variance of the parameter estimate.
     # err = compute one standard deviation errors (scaled) on the parameters u.
-    def powerlaw(x,a,b):
-        return a*(x**b)
-    MM=MarketMaker(0, 0, 0.5, 0.5)
+    def powerlaw(x, a, b):
+        return a * (x ** b)
+
+    MM = MarketMaker(0, 0, 0.5, 0.5)
     for i in range(5999):
         MM.update_price()
-    t=numpy.linspace(0,5999,6000)
+    t = numpy.linspace(0, 5999, 6000)
 
     abs_returns = [abs(x) for x in MM.return_t]
-    pars,covar =  curve_fit(powerlaw,t,abs_returns)
+    pars, covar = curve_fit(powerlaw, t, abs_returns)
     err = numpy.sqrt(numpy.diag(covar))
 
     print('pars: ', pars)
@@ -332,40 +313,81 @@ def power_fitting_time():
     print('error:', err)
 
 def autocorrelation_function():
-    MM=MarketMaker(0, 0, 0.5, 0.5)
-    for i in range(5*5999):
+    MM = MarketMaker(0, 0, 0.5, 0.5)
+    for i in range(5 * 5999):
         MM.update_price()
     abs_returns = [abs(x) for x in MM.return_t]
-    a = tsast.acf(abs_returns,nlags=99)
-    b = tsast.acf(MM.return_t,nlags=99)
-
+    a = tsast.acf(abs_returns, nlags=99)
+    b = tsast.acf(MM.return_t, nlags=99)
 
     plt.figure()
-    plt.ylim(-0.1,0.3)
-    plt.plot(a,label='abs returns')
+    plt.ylim(-0.1, 0.3)
+    plt.plot(a, label='abs returns')
     plt.plot(b, label='raw returns')
     plt.title('Autocorrelation function')
     plt.xlabel('lags')
     plt.ylabel('autocorrelation')
 
-t0 = time.time()
-dist_compare()
-t1 = time.time()
-total = t1 - t0
-print('time: ', total)
-plt.legend()
-plt.show()
-# MM = MarketMaker(0, 0, 0.5, 0.5)
+def anderson_test():
+    MM = MarketMaker(0, 0, 0.5, 0.5)
+    for i in range(5998):
+        MM.update_price()
+    abs_returns = [abs(x) for x in MM.return_t]
+    print('abs_return, expon', sts.anderson(abs_returns, 'expon'))
+    print('raw_return, expon',sts.anderson(MM.return_t, 'expon'))
+    print('abs_return, norm',sts.anderson(abs_returns, 'norm'))
+    print('raw_return, norm',sts.anderson(MM.return_t, 'norm'))
+    print('abs_return, extreme1',sts.anderson(abs_returns, 'extreme1'))
+    print('raw_return, extreme1',sts.anderson(MM.return_t, 'extreme1'))
+    print('abs_return, logistic',sts.anderson(abs_returns, 'logistic'))
+    print('raw_return, logistic',sts.anderson(MM.return_t, 'logistic'))
+    print('abs_return, gumbel',sts.anderson(abs_returns, 'gumbel'))
+    print('raw_return, gumbel',sts.anderson(MM.return_t, 'gumbel'))
+
+def kstst():
+    abs_expon_D=[]
+    abs_expon_p=[]
+    raw_expon_D=[]
+    raw_expon_p=[]
+    for j in range(101):
+        MM = MarketMaker(0, 0, 0.5, 0.5)
+        print('Iteration',j)
+        for i in range(5999):
+            MM.update_price()
+        abs_returns = [abs(x) for x in MM.return_t]
+        [D1,p1]= sts.kstest(abs_returns, 'expon')
+        abs_expon_D.append(D1)
+        abs_expon_p.append(p1)
+        [D,p]=sts.kstest(MM.return_t, 'expon')
+        raw_expon_D.append(D)
+        raw_expon_p.append(p)
+    print('abs_expon',numpy.median(abs_expon_D),abs_expon_p[abs_expon_D.index(numpy.median(abs_expon_D))])
+    print('raw_expon',numpy.median(raw_expon_D),raw_expon_p[raw_expon_D.index(numpy.median(raw_expon_D))])
+
+def hill(pt):
+    """Returns the Hill Tail index of the price series vector ts"""
+    a = sorted(pt)
+    n = len(a) - 1
+    h = []
+    for k in range(1, 500):
+        s = 0
+        for j in range(2, k):
+            s = s + (numpy.log(a[n - j + 1]) - numpy.log(a[n - k]))
+        h.append(s / k)
+    return h
+
+
+
 #
-# for i in range(5998):
-#     MM.update_price()
-# abs_returns = [abs(x) for x in MM.return_t]
-# plt.figure()
-# plt.subplot(2, 1, 1)
-# plt.plot(MM.return_t)
-# plt.subplot(2, 1, 2)
-# plt.plot(abs_returns)
+# t0 = time.time()
+# dist_compare()
+# t1 = time.time()
+# total = t1 - t0
+# print('time: ', total)
+#
 # plt.show()
+
+
 # # Fit a power law distribution
 # fit=powerlaw.Fit(MM.return_t)
 # # Calculating best minimal value for power law fit
