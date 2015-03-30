@@ -3,10 +3,11 @@ import numpy
 import matplotlib.pyplot as plt
 import scipy.stats as sts
 from scipy.optimize import curve_fit
-from plpva import plpva
+from pyeeg import pyeeg
 import powerlaw.powerlaw as powerlaw
 
 from statsmodels.tsa import stattools as tsast
+
 
 class Chartist:
     chi = 1.50
@@ -18,6 +19,7 @@ class Chartist:
         demand = self.chi * (pt[-1] - pt[-2]) + self.epsilon_c
         return demand
 
+
 class Fundamentalist:
     phi = 0.12
     sigma_f = 0.708
@@ -28,6 +30,7 @@ class Fundamentalist:
         self.epsilon_f = numpy.random.normal(0, self.sigma_f)
         demand = self.phi * (self.p_f - pt[-1]) + self.epsilon_f
         return demand
+
 
 class MarketMaker:
     def __init__(self, p_0, p_1, nf_0, nc_0):
@@ -84,8 +87,9 @@ class MarketMaker:
 
 """ Pairwise comparisons between data and power_law, exponential, lognormal, truncated_power_law, stretched_exponential distributions
 """
-def distibution_compare():
 
+
+def distibution_compare():
     xmins = []
     alphas = []
     sigmas = []
@@ -266,8 +270,11 @@ def distibution_compare():
     print('p_tr_sr: ', p_tr_sr)
     print('p_tr_sr1: ', p_tr_sr1)
 
+
 """ Kurtosis and Skewness
 """
+
+
 def kurt_skew():
     kurt = []
     skewness = []
@@ -288,8 +295,9 @@ def kurt_skew():
     @return covar = the estimated covariance of pars. The diagonals provide the variance of the parameter estimate.
     @return err = compute one standard deviation errors (scaled) on the parameters u.
 """
-def power_fitting_time():
 
+
+def power_fitting_time():
     def powerlaw(x, a, b):
         return a * (x ** b)
 
@@ -313,41 +321,91 @@ def power_fitting_time():
     @param xmin
     @return Hill Tail index
 """
+
+
 def hill_index():
-    alphas=[]
-    for  j in range(1001):
+    alphas = []
+    alphas95 = []
+    alphas1 = []
+    for j in range(101):
         MM = MarketMaker(0, 0, 0.5, 0.5)
-        for i in range(5999):
+        for i in range(8500-1):
             MM.update_price()
         abs_returns = [abs(x) for x in MM.return_t]
+
         rs = sorted(abs_returns)
-        xmin= 1.3929
-        rs1= [x for x in rs if x>xmin]
-        n=len(rs1)
-        sum=0
+        xmin = 1.3929
+        rs1 = [x for x in rs if x > xmin]
+        n = len(rs1)
+        sum = 0
         for i in range(n):
-            sum=sum + numpy.log(rs1[i]/xmin)
-        alpha=1 + n * sum**-1
+            sum = sum + numpy.log(rs1[i] / xmin)
+        alpha = 1 + n * sum ** -1
         alphas.append(alpha)
-    print('Hill Index: ',numpy.median(alphas))
+
+        rs95 = rs[8075:]
+        n95 = len(rs95)
+        sum95 = 0
+        xmin95=rs[8075]
+        for j in range(n95):
+            sum95 = sum95 + numpy.log(rs95[j] / xmin95)
+        alpha95 = 1 + n95 * sum95 ** -1
+        alphas95.append(alpha95)
+
+        with open('abs_returns.txt') as g:
+            s_p_abs = g.readlines()
+        s_p_abs_returns = [float(x) for x in s_p_abs]
+        returns = sorted(s_p_abs_returns)
+        slice = len(rs1) / len(rs)
+        nsp = len(returns) - int(slice * len(returns) )
+        print(nsp)
+        returns1 = returns[nsp:]
+        sum1 = 0
+        xmin1=returns[nsp]
+        for j in range(len(returns1)):
+            sum1 = sum1 + numpy.log(returns1[j] / xmin1)
+        alpha1 = 1 + len(returns1) * sum1 ** -1
+        alphas1.append(alpha1)
+
+    print('Hill index S&P', numpy.median(alphas1))
+    print('Hill Index: ', numpy.median(alphas))
+    print('Hill Index upper 5%: ', numpy.median(alphas95))
 
 
 """ Autocorrelation function plot
 """
-def autocorrelation_function():
+
+
+def autocorrelation_returns():
     MM = MarketMaker(0, 0, 0.5, 0.5)
-    for i in range(5 * 5999):
+    for i in range(8500):
         MM.update_price()
     abs_returns = [abs(x) for x in MM.return_t]
+
     a = tsast.acf(abs_returns, nlags=99)
     b = tsast.acf(MM.return_t, nlags=99)
 
+    with open('raw_returns.txt') as f:
+        s_p_raw = f.readlines()
+    with open('abs_returns.txt') as g:
+        s_p_abs = g.readlines()
+    s_p_raw_returns = [float(x) for x in s_p_raw]
+    s_p_abs_returns = [float(x) for x in s_p_abs]
+
+    c = tsast.acf(s_p_raw_returns, nlags=99)
+    d = tsast.acf(s_p_abs_returns, nlags=99)
     plt.figure()
     plt.ylim(-0.1, 0.3)
-    plt.plot(a, label='abs returns')
-    plt.plot(b, label='raw returns')
+    plt.plot(a, 'r', label='abs returns')
+    plt.plot(d, 'r--', label='S&P abs returns')
+    plt.plot(b, 'b', label='raw returns')
+    plt.plot(c, 'b--', label='S&P raw returns')
+
+    plt.axhline(0, 0, 1, color='black', ls='dotted', lw=1)
+    plt.grid(True)
     plt.title('Autocorrelation function')
     plt.xlabel('lags')
+
     plt.ylabel('autocorrelation')
 
 
@@ -361,12 +419,14 @@ def autocorrelation_function():
     @return critical : the critical values for this distribution
     @return: The significance levels for the corresponding critical values in percents.
 """
+
+
 def anderson_test(distribution):
     MM = MarketMaker(0, 0, 0.5, 0.5)
     for i in range(5998):
         MM.update_price()
     abs_returns = [abs(x) for x in MM.return_t]
-    print('Anderson Test data vs ',distribution,': ', sts.anderson(abs_returns, distribution))
+    print('Anderson Test data vs ', distribution, ': ', sts.anderson(abs_returns, distribution))
 
 
 """ Kolmogorov-Smirnov Test
@@ -376,24 +436,29 @@ def anderson_test(distribution):
     @return D: KS test statistic, either D, D+ or D-.
     @return p-value : One-tailed or two-tailed p-value.
 """
+
+
 def kstst(distribution):
-    abs_expon_D=[]
-    abs_expon_p=[]
+    abs_expon_D = []
+    abs_expon_p = []
     for j in range(101):
         MM = MarketMaker(0, 0, 0.5, 0.5)
-        print('Iteration',j)
+        print('Iteration', j)
         for i in range(5999):
             MM.update_price()
         abs_returns = [abs(x) for x in MM.return_t]
-        [D1,p1]= sts.kstest(abs_returns, 'distribution')
+        [D1, p1] = sts.kstest(abs_returns, 'distribution')
         abs_expon_D.append(D1)
         abs_expon_p.append(p1)
-    print('K-S test data vs ',distribution,': ',numpy.median(abs_expon_D),abs_expon_p[abs_expon_D.index(numpy.median(abs_expon_D))])
+    print('K-S test data vs ', distribution, ': ', numpy.median(abs_expon_D),
+          abs_expon_p[abs_expon_D.index(numpy.median(abs_expon_D))])
 
 
 """ Returns the Hurst Exponent used to measure long-memory of time series
 """
-def hurst(ts):
+
+
+def hurst1(ts):
     """Returns the Hurst Exponent of the time series vector ts"""
     # Create the range of lag values
     lags = range(2, 100)
@@ -407,10 +472,34 @@ def hurst(ts):
     # Return the Hurst exponent from the polyfit output
     return poly[0] * 2.0
 
+def hurst(X):
+    """ Compute the Hurst exponent of X. If the output H=0.5,the behavior
+	of the time-series is similar to random walk. If H<0.5, the time-series
+	cover less "distance" than a random walk, vice verse.
+    """
+    N = len(X)
+
+	T = numpy.array([float(i) for i in range(1,N+1)])
+	Y = numpy.cumsum(X)
+	Ave_T = Y/T
+
+	S_T = numpy.zeros((N))
+	R_T = numpy.zeros((N))
+	for i in numpy.range(N):
+		S_T[i] = std(X[:i+1])
+		X_T = Y - T * Ave_T[i]
+		R_T[i] = max(X_T[:i + 1]) - min(X_T[:i + 1])
+
+	R_S = R_T / S_T
+	R_S = log(R_S)
+	n = log(T).reshape(N, 1)
+	H = lstsq(n[1:], R_S[1:])[0]
+	return H[0]
+
 
 
 # def hill(pt):
-#     """Returns the Hill Tail index of the price series vector ts"""
+# """Returns the Hill Tail index of the price series vector ts"""
 #     a = sorted(pt)
 #     n = len(a) - 1
 #     h = []
