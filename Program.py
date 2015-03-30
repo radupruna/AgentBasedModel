@@ -3,7 +3,6 @@ import numpy
 import matplotlib.pyplot as plt
 import scipy.stats as sts
 from scipy.optimize import curve_fit
-from pyeeg import pyeeg
 import powerlaw.powerlaw as powerlaw
 
 from statsmodels.tsa import stattools as tsast
@@ -474,28 +473,48 @@ def hurst1(ts):
 
 def hurst(X):
     """ Compute the Hurst exponent of X. If the output H=0.5,the behavior
-	of the time-series is similar to random walk. If H<0.5, the time-series
-	cover less "distance" than a random walk, vice verse.
+    of the time-series is similar to random walk. If H<0.5, the time-series
+    cover less "distance" than a random walk, vice verse.
     """
     N = len(X)
+    T = numpy.array([float(i) for i in range(1,N+1)])
+    Y = numpy.cumsum(X)
+    Ave_T = Y/T
 
-	T = numpy.array([float(i) for i in range(1,N+1)])
-	Y = numpy.cumsum(X)
-	Ave_T = Y/T
+    S_T = numpy.zeros((N))
+    R_T = numpy.zeros((N))
+    for i in range(N):
+        S_T[i] = numpy.std(X[:i+1])
+        X_T = Y - T * Ave_T[i]
+        R_T[i] = max(X_T[:i + 1]) - min(X_T[:i + 1])
 
-	S_T = numpy.zeros((N))
-	R_T = numpy.zeros((N))
-	for i in numpy.range(N):
-		S_T[i] = std(X[:i+1])
-		X_T = Y - T * Ave_T[i]
-		R_T[i] = max(X_T[:i + 1]) - min(X_T[:i + 1])
+    R_S = R_T / S_T
+    R_S = numpy.log(R_S)
+    n = numpy.log(T).reshape(N, 1)
+    H = numpy.linalg.lstsq(n[1:], R_S[1:])[0]
+    return H[0]
 
-	R_S = R_T / S_T
-	R_S = log(R_S)
-	n = log(T).reshape(N, 1)
-	H = lstsq(n[1:], R_S[1:])[0]
-	return H[0]
+hurst_abs=[]
+hurst_raw=[]
+for j in range(5):
+    print (j)
+    MM = MarketMaker(0, 0, 0.5, 0.5)
+    for i in range(8500-1):
+        MM.update_price()
+    abs_returns = [abs(x) for x in MM.return_t]
+    hurst_abs.append(hurst(abs_returns))
+    hurst_raw.append(hurst(MM.return_t))
+print(numpy.median(hurst_abs))
+print(numpy.median(hurst_raw))
 
+with open('abs_returns.txt') as g:
+    s_p_abs = g.readlines()
+s_p_abs_returns = [float(x) for x in s_p_abs]
+with open('raw_returns.txt') as f:
+    s_p_raw = f.readlines()
+s_p_raw_returns = [float(x) for x in s_p_raw]
+print(hurst(s_p_abs_returns))
+print(hurst(s_p_raw_returns))
 
 
 # def hill(pt):
