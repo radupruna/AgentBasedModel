@@ -82,7 +82,8 @@ class MarketMaker:
         self.return_t.append(100 * (self.price_t[-1] - self.price_t[-2]))
 
 
-#Pairwise comparisons between power_law, exponential, lognormal, truncated_power_law, stretched_exponential distributions
+""" Pairwise comparisons between data and power_law, exponential, lognormal, truncated_power_law, stretched_exponential distributions
+"""
 def distibution_compare():
 
     xmins = []
@@ -265,7 +266,8 @@ def distibution_compare():
     print('p_tr_sr: ', p_tr_sr)
     print('p_tr_sr1: ', p_tr_sr1)
 
-# Returns the kurtosis and swewness
+""" Kurtosis and Skewness
+"""
 def kurt_skew():
     kurt = []
     skewness = []
@@ -279,6 +281,7 @@ def kurt_skew():
         skewness.append(sts.skew(MM.return_t))
     print('Kurtosis: ', float("{0:.4f}".format(numpy.median(kurt))))
     print('Skewness: ', float("{0:.4f}".format(numpy.median(skewness))))
+
 
 """ Abs Returns as a function of time assumes return = a* time**b
     @return pars = Optimal values for the parameters so that the sum of the squared error of f(xdata, *pars) - ydata is minimized
@@ -303,25 +306,34 @@ def power_fitting_time():
     print('covar: ', covar)
     print('error:', err)
 
+
 """ Returns the exponent of a fitted PowerLaw distribution using Maximum Likelihood Method
     This estimator is equivalent to the Hill estimator+
     @param returns
     @param xmin
     @return Hill Tail index
 """
-def hill_index(returns, xmin):
+def hill_index():
     alphas=[]
-    rs = sorted(returns)
-    rs1= [x for x in rs if x>xmin]
-    n=len(rs1)
-    sum=0
-    for i in range(n):
-        sum=sum + numpy.log(rs1[i]/xmin)
-    alpha=1 + n * sum**-1
+    for  j in range(1001):
+        MM = MarketMaker(0, 0, 0.5, 0.5)
+        for i in range(5999):
+            MM.update_price()
+        abs_returns = [abs(x) for x in MM.return_t]
+        rs = sorted(abs_returns)
+        xmin= 1.3929
+        rs1= [x for x in rs if x>xmin]
+        n=len(rs1)
+        sum=0
+        for i in range(n):
+            sum=sum + numpy.log(rs1[i]/xmin)
+        alpha=1 + n * sum**-1
+        alphas.append(alpha)
+    print('Hill Index: ',numpy.median(alphas))
 
-    print(alpha)
 
-#autocorrelation
+""" Autocorrelation function plot
+"""
 def autocorrelation_function():
     MM = MarketMaker(0, 0, 0.5, 0.5)
     for i in range(5 * 5999):
@@ -338,6 +350,7 @@ def autocorrelation_function():
     plt.xlabel('lags')
     plt.ylabel('autocorrelation')
 
+
 """ Anderson-Darling Test
     Works for exponential, normal, logistic, extreme 1 and Gumbel distributions
     If A2 is larger than these critical values then for the corresponding significance level,
@@ -348,9 +361,13 @@ def autocorrelation_function():
     @return critical : the critical values for this distribution
     @return: The significance levels for the corresponding critical values in percents.
 """
-def anderson_test(returns, distribution):
-    print('"""Anderson-Darling Test, data vs ', distribution,' """')
-    print(sts.anderson(returns, 'distribution'))
+def anderson_test(distribution):
+    MM = MarketMaker(0, 0, 0.5, 0.5)
+    for i in range(5998):
+        MM.update_price()
+    abs_returns = [abs(x) for x in MM.return_t]
+    print('Anderson Test data vs ',distribution,': ', sts.anderson(abs_returns, distribution))
+
 
 """ Kolmogorov-Smirnov Test
     Returns the D test value and p-value
@@ -359,19 +376,23 @@ def anderson_test(returns, distribution):
     @return D: KS test statistic, either D, D+ or D-.
     @return p-value : One-tailed or two-tailed p-value.
 """
-def kstst(returns, distribution):
+def kstst(distribution):
     abs_expon_D=[]
     abs_expon_p=[]
-    raw_expon_D=[]
-    raw_expon_p=[]
+    for j in range(101):
+        MM = MarketMaker(0, 0, 0.5, 0.5)
+        print('Iteration',j)
+        for i in range(5999):
+            MM.update_price()
+        abs_returns = [abs(x) for x in MM.return_t]
+        [D1,p1]= sts.kstest(abs_returns, 'distribution')
+        abs_expon_D.append(D1)
+        abs_expon_p.append(p1)
+    print('K-S test data vs ',distribution,': ',numpy.median(abs_expon_D),abs_expon_p[abs_expon_D.index(numpy.median(abs_expon_D))])
 
-    [D1,p1]= sts.kstest(returns, distribution)
-    abs_expon_D.append(D1)
-    abs_expon_p.append(p1)
-    print('"""Kolmogorov-Smirnov Test, data vs ', distribution,' """')
-    print('D: ',numpy.median(abs_expon_D),'; p-val: ',abs_expon_p[abs_expon_D.index(numpy.median(abs_expon_D))])
 
-#Returns the Hurst Exponent of the time series vector ts
+""" Returns the Hurst Exponent used to measure long-memory of time series
+"""
 def hurst(ts):
     """Returns the Hurst Exponent of the time series vector ts"""
     # Create the range of lag values
@@ -388,7 +409,6 @@ def hurst(ts):
 
 
 
-#
 # def hill(pt):
 #     """Returns the Hill Tail index of the price series vector ts"""
 #     a = sorted(pt)
