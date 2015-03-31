@@ -561,8 +561,6 @@ def probability_plot(distribution):
     plt.title('P-P plot data vs '+ distribution+' distribution')
 
 
-
-
 """ Creates histogram plots for the simulated and empirical data
 """
 def histograms():
@@ -579,14 +577,6 @@ def histograms():
         s_p_abs = g.readlines()
     s_p_abs_returns = [100*float(x) for x in s_p_abs]
 
-    #Fit a normal distribution on top of returns
-    mean = numpy.mean(MM.return_t)
-    std = numpy.std(MM.return_t)
-    mean_sp = numpy.mean(s_p_raw_returns)
-    std_sp = numpy.std(s_p_raw_returns)
-    print(sts.kurtosis(MM.return_t))
-    print(mean,mean_sp)
-
     plt.figure()
     plt.hist(MM.return_t,bins=200)
     plt.title('raw returns')
@@ -598,15 +588,12 @@ def histograms():
     plt.figure()
     plt.hist(s_p_raw_returns,bins=150)
     plt.title('S&P raw returns')
-    y = numpy.linspace(-4,4,150)
-    plt.plot(y,mlab.normpdf(y,mean_sp,2))
 
     plt.figure()
     plt.title('S&P abs returns')
     plt.hist(s_p_abs_returns,bins=150)
 
-histograms()
-plt.show()
+
 # hurst_abs=[]
 # hurst_raw=[]
 # for j in range(5):
