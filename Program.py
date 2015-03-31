@@ -84,15 +84,87 @@ class MarketMaker:
         self.return_t.append(100 * (self.price_t[-1] - self.price_t[-2]))
 
 
-""" Pairwise comparisons between data and power_law, exponential, lognormal, truncated_power_law, stretched_exponential distributions
+""" Fit a powerlaw distribution p(x) = x^-alpha to your data
+    @return xmin, alpha, sigma, KS statistic D
 """
 
-
-def distibution_compare():
+def powerlaw_fit():
     xmins = []
     alphas = []
     sigmas = []
     Ds = []
+
+    with open('abs_returns.txt') as g:
+        s_p_abs = g.readlines()
+    s_p_abs_returns = [float(x) for x in s_p_abs if float(x)>0]
+
+    fitSP = powerlaw.Fit(s_p_abs_returns)
+    print('xmin S&P: ', fitSP.xmin)
+    print('alpha S&P: ', fitSP.power_law.alpha)
+    print('sigma S&P: ', fitSP.power_law.sigma)
+    print('D S&P: ', fitSP.power_law.D)
+
+    # Example of multiple local minima of Kolmogorov-Smirnov distance D across xmin
+    plt.figure()
+    plt.plot(fitSP.xmins, fitSP.Ds,'b', label='D')
+    plt.plot(fitSP.xmins, fitSP.sigmas,'g--', label='sigma')
+    plt.plot(fitSP.xmins, fitSP.sigmas/fitSP.alphas,'r--', label='sigma/alpha')
+    plt.xlabel('xmin')
+    plt.title('S&P 500 data')
+    plt.legend(loc=2)
+    plt.ylim(0, 0.6)
+
+    for j in range(1):
+        MM = MarketMaker(0, 0, 0.5, 0.5)
+        print('Iteration: ', j)
+        for i in range(5999):
+            MM.update_price()
+
+        # Calculate absolute returns
+        abs_returns = [abs(x) for x in MM.return_t if abs(x)>0]
+
+        # Fit a power law distribution to absolute returns
+        fit = powerlaw.Fit(abs_returns)
+        # Calculating best minimal value for power law fit
+
+        xmin = fit.xmin
+        alpha = fit.power_law.alpha
+        sigma = fit.power_law.sigma
+        D = fit.power_law.D
+
+        xmins.append(xmin)
+        alphas.append(alpha)
+        sigmas.append(sigma)
+        Ds.append(D)
+
+        # Example of multiple local minima of Kolmogorov-Smirnov distance D across xmin
+        plt.figure()
+        plt.plot(fit.xmins, fit.Ds, 'b', label='D')
+        plt.plot(fit.xmins, fit.sigmas,'g--', label='sigma')
+        plt.plot(fit.xmins, fit.sigmas/fit.alphas,'r--', label='sigma/alpha')
+        plt.xlabel('xmin')
+        plt.title('Simulated data')
+        plt.legend(loc=2)
+        plt.ylim(0, 0.6)
+
+    print('xmin: ', numpy.median(xmins))
+    print('alpha: ', numpy.median(alphas))
+    print('sigma: ', numpy.median(sigmas))
+    print('D: ', numpy.median(Ds))
+
+
+
+powerlaw_fit()
+plt.show()
+
+""" Pairwise comparisons between data and power_law, exponential, lognormal, truncated_power_law, stretched_exponential distributions
+    @return R the loglikelihood ratio between the two candidate distributions.
+    R>0 if the data is more likely in the first distribution, R<0 if the data is more likely in the second distribution.
+    @return p the significance value for that direction
+"""
+
+
+def distibution_compare():
 
     R_pw_exps = []
     p_pw_exps = []
@@ -130,16 +202,6 @@ def distibution_compare():
         # Fit a power law distribution to absolute returns
         fit = powerlaw.Fit(abs_returns)
         # Calculating best minimal value for power law fit
-
-        xmin = fit.xmin
-        alpha = fit.power_law.alpha
-        sigma = fit.power_law.sigma
-        D = fit.power_law.D
-
-        xmins.append(xmin)
-        alphas.append(alpha)
-        sigmas.append(sigma)
-        Ds.append(D)
 
         R_pw_exp, p_pw_exp = fit.distribution_compare('power_law', 'exponential')
         R_pw_log, p_pw_1og = fit.distribution_compare('power_law', 'lognormal')
@@ -179,11 +241,6 @@ def distibution_compare():
 
         R_tr_srs.append(float("{0:.4f}".format(R_tr_sr)))
         p_tr_srs.append(float("{0:.4f}".format(p_tr_sr)))
-
-    print('xmin: ', numpy.median(xmins))
-    print('alpha: ', numpy.median(alphas))
-    print('sigma: ', numpy.median(sigmas))
-    print('D: ', numpy.median(Ds))
 
     R_pw_exp = numpy.median(R_pw_exps)
     index = R_pw_exps.index(R_pw_exp)
@@ -456,21 +513,6 @@ def kstst(distribution):
 """ Returns the Hurst Exponent used to measure long-memory of time series
 """
 
-
-def hurst1(ts):
-    """Returns the Hurst Exponent of the time series vector ts"""
-    # Create the range of lag values
-    lags = range(2, 100)
-
-    # Calculate the array of the variances of the lagged differences
-    tau = [numpy.sqrt(numpy.std(numpy.subtract(ts[lag:], ts[:-lag]))) for lag in lags]
-
-    # Use a linear fit to estimate the Hurst Exponent
-    poly = numpy.polyfit(numpy.log(lags), numpy.log(tau), 1)
-
-    # Return the Hurst exponent from the polyfit output
-    return poly[0] * 2.0
-
 def hurst(X):
     """ Compute the Hurst exponent of X. If the output H=0.5,the behavior
     of the time-series is similar to random walk. If H<0.5, the time-series
@@ -494,27 +536,28 @@ def hurst(X):
     H = numpy.linalg.lstsq(n[1:], R_S[1:])[0]
     return H[0]
 
-hurst_abs=[]
-hurst_raw=[]
-for j in range(5):
-    print (j)
-    MM = MarketMaker(0, 0, 0.5, 0.5)
-    for i in range(8500-1):
-        MM.update_price()
-    abs_returns = [abs(x) for x in MM.return_t]
-    hurst_abs.append(hurst(abs_returns))
-    hurst_raw.append(hurst(MM.return_t))
-print(numpy.median(hurst_abs))
-print(numpy.median(hurst_raw))
 
-with open('abs_returns.txt') as g:
-    s_p_abs = g.readlines()
-s_p_abs_returns = [float(x) for x in s_p_abs]
-with open('raw_returns.txt') as f:
-    s_p_raw = f.readlines()
-s_p_raw_returns = [float(x) for x in s_p_raw]
-print(hurst(s_p_abs_returns))
-print(hurst(s_p_raw_returns))
+# hurst_abs=[]
+# hurst_raw=[]
+# for j in range(5):
+#     print (j)
+#     MM = MarketMaker(0, 0, 0.5, 0.5)
+#     for i in range(8500-1):
+#         MM.update_price()
+#     abs_returns = [abs(x) for x in MM.return_t]
+#     hurst_abs.append(hurst(abs_returns))
+#     hurst_raw.append(hurst(MM.return_t))
+# print(numpy.median(hurst_abs))
+# print(numpy.median(hurst_raw))
+#
+# with open('abs_returns.txt') as g:
+#     s_p_abs = g.readlines()
+# s_p_abs_returns = [float(x) for x in s_p_abs]
+# with open('raw_returns.txt') as f:
+#     s_p_raw = f.readlines()
+# s_p_raw_returns = [float(x) for x in s_p_raw]
+# print(hurst(s_p_abs_returns))
+# print(hurst(s_p_raw_returns))
 
 
 # def hill(pt):
