@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import scipy.stats as sts
 from scipy.optimize import curve_fit
 import powerlaw.powerlaw as powerlaw
+import matplotlib.mlab as mlab
 
 from statsmodels.tsa import stattools as tsast
 
@@ -84,8 +85,10 @@ class MarketMaker:
         self.return_t.append(100 * (self.price_t[-1] - self.price_t[-2]))
 
 
-""" Fit a powerlaw distribution p(x) = x^-alpha to your data
-    @return xmin, alpha, sigma, KS statistic D
+""" Fit a powerlaw distribution p(x) = x^-alpha to simulated data and S&P 500 data.
+    Plot multiple local minima of Kolmogorov-Smirnov distance D across xmin.
+    @return xmin, alpha, sigma, KS statistic D.
+
 """
 
 def powerlaw_fit():
@@ -152,10 +155,6 @@ def powerlaw_fit():
     print('sigma: ', numpy.median(sigmas))
     print('D: ', numpy.median(Ds))
 
-
-
-powerlaw_fit()
-plt.show()
 
 """ Pairwise comparisons between data and power_law, exponential, lognormal, truncated_power_law, stretched_exponential distributions
     @return R the loglikelihood ratio between the two candidate distributions.
@@ -335,6 +334,12 @@ def kurt_skew():
     kurt = []
     skewness = []
 
+    with open('raw_returns.txt') as g:
+        s_p_raw = g.readlines()
+    s_p_raw_returns = [float(x) for x in s_p_raw]
+    print('S&P Kurtosis:', sts.kurtosis(s_p_raw_returns))
+    print('S&P Skewness:', sts.skew(s_p_raw_returns))
+
     for j in range(10000):
         MM = MarketMaker(0, 0, 0.5, 0.5)
         print('iteration', j)
@@ -510,13 +515,13 @@ def kstst(distribution):
           abs_expon_p[abs_expon_D.index(numpy.median(abs_expon_D))])
 
 
-""" Returns the Hurst Exponent used to measure long-memory of time series
+""" Returns the Hurst Exponent used to measure long-memory of time series X
 """
 
 def hurst(X):
     """ Compute the Hurst exponent of X. If the output H=0.5,the behavior
     of the time-series is similar to random walk. If H<0.5, the time-series
-    cover less "distance" than a random walk, vice verse.
+    cover less "distance" than a random walk and vice verse.
     """
     N = len(X)
     T = numpy.array([float(i) for i in range(1,N+1)])
@@ -536,7 +541,72 @@ def hurst(X):
     H = numpy.linalg.lstsq(n[1:], R_S[1:])[0]
     return H[0]
 
+""" Calculate quantiles for a probability plot, and optionally show the plot.
+    Assessing how closely two data sets agree, plots the two cumulative distribution functions against each other.
+    Generates a probability plot of sample data against the quantiles of a specified theoretical distribution
+    Calculates a best-fit line for the data and plots the results
+    The distributions are equal if and only if the plot falls on this line – any deviation indicates a difference between the distributions.
+"""
 
+def probability_plot(distribution):
+    MM = MarketMaker(0, 0, 0.5, 0.5)
+    for i in range(5999):
+        MM.update_price()
+    # Calculate absolute returns
+    def power(x):
+        return (x^4)
+    abs_returns = [abs(x) for x in MM.return_t if abs(x)>0]
+    plt.figure()
+    sts.probplot(abs_returns, dist=distribution, plot=plt)
+    plt.title('P-P plot data vs '+ distribution+' distribution')
+
+
+
+
+""" Creates histogram plots for the simulated and empirical data
+"""
+def histograms():
+    MM = MarketMaker(0, 0, 0.5, 0.5)
+    for i in range(5999):
+        MM.update_price()
+    abs_returns = [abs(x) for x in MM.return_t]
+
+    with open('raw_returns.txt') as g:
+        s_p_raw = g.readlines()
+    s_p_raw_returns = [100*float(x) for x in s_p_raw]
+
+    with open('abs_returns.txt') as g:
+        s_p_abs = g.readlines()
+    s_p_abs_returns = [100*float(x) for x in s_p_abs]
+
+    #Fit a normal distribution on top of returns
+    mean = numpy.mean(MM.return_t)
+    std = numpy.std(MM.return_t)
+    mean_sp = numpy.mean(s_p_raw_returns)
+    std_sp = numpy.std(s_p_raw_returns)
+    print(sts.kurtosis(MM.return_t))
+    print(mean,mean_sp)
+
+    plt.figure()
+    plt.hist(MM.return_t,bins=200)
+    plt.title('raw returns')
+
+    plt.figure()
+    plt.hist(abs_returns,bins=200)
+    plt.title('abs returns')
+
+    plt.figure()
+    plt.hist(s_p_raw_returns,bins=150)
+    plt.title('S&P raw returns')
+    y = numpy.linspace(-4,4,150)
+    plt.plot(y,mlab.normpdf(y,mean_sp,2))
+
+    plt.figure()
+    plt.title('S&P abs returns')
+    plt.hist(s_p_abs_returns,bins=150)
+
+histograms()
+plt.show()
 # hurst_abs=[]
 # hurst_raw=[]
 # for j in range(5):
