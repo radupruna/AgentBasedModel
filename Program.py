@@ -2,6 +2,7 @@ __author__ = 'Radu'
 import numpy
 import matplotlib.pyplot as plt
 import scipy.stats as sts
+import scipy
 from scipy.optimize import curve_fit
 import powerlaw.powerlaw as powerlaw
 import matplotlib.mlab as mlab
@@ -41,15 +42,16 @@ class MarketMaker:
         self.x_t = []  # Majority index
         self.df = []  # Demands of Fundamentalists
         self.dc = []  # Demands of Chartists
+        self.volume = []
         self.attract = []  # Attractiveness Levels
         self.return_t = []  # Returns
+        self.volatility = []
 
         self.price_t.append(p_0)
         self.price_t.append(p_1)
         self.nf.append(nf_0)
         self.nc.append(nc_0)
         self.x_t.append(nf_0 - nc_0)
-        self.return_t.append(100 * (p_1 - p_0))
 
         self.fund = Fundamentalist()
         self.chart = Chartist()
@@ -77,12 +79,14 @@ class MarketMaker:
     def update_price(self):
         mu = 0.01
         self.update_demands()
+        self.volume.append(abs(self.dc[-1]) + abs(self.df[-1]))
         a = self.get_attractiveness(self.pf, self.x_t[-1], self.price_t[-1])
         self.attract.append(a)
         self.update_fractions(a)
         price = self.price_t[-1] + mu * (self.dc[-1] * self.nc[-1] + self.df[-1] * self.nf[-1])
         self.price_t.append(price)
         self.return_t.append(100 * (self.price_t[-1] - self.price_t[-2]))
+        self.volatility.append((abs(self.return_t[-1])))
 
 
 """ Fit a powerlaw distribution p(x) = x^-alpha to simulated data and S&P 500 data.
@@ -90,6 +94,7 @@ class MarketMaker:
     @return xmin, alpha, sigma, KS statistic D.
 
 """
+
 
 def powerlaw_fit():
     xmins = []
@@ -99,7 +104,7 @@ def powerlaw_fit():
 
     with open('abs_returns.txt') as g:
         s_p_abs = g.readlines()
-    s_p_abs_returns = [float(x) for x in s_p_abs if float(x)>0]
+    s_p_abs_returns = [float(x) for x in s_p_abs if float(x) > 0]
 
     fitSP = powerlaw.Fit(s_p_abs_returns)
     print('xmin S&P: ', fitSP.xmin)
@@ -109,9 +114,9 @@ def powerlaw_fit():
 
     # Example of multiple local minima of Kolmogorov-Smirnov distance D across xmin
     plt.figure()
-    plt.plot(fitSP.xmins, fitSP.Ds,'b', label='D')
-    plt.plot(fitSP.xmins, fitSP.sigmas,'g--', label='sigma')
-    plt.plot(fitSP.xmins, fitSP.sigmas/fitSP.alphas,'r--', label='sigma/alpha')
+    plt.plot(fitSP.xmins, fitSP.Ds, 'b', label='D')
+    plt.plot(fitSP.xmins, fitSP.sigmas, 'g--', label='sigma')
+    plt.plot(fitSP.xmins, fitSP.sigmas / fitSP.alphas, 'r--', label='sigma/alpha')
     plt.xlabel('xmin')
     plt.title('S&P 500 data')
     plt.legend(loc=2)
@@ -124,7 +129,7 @@ def powerlaw_fit():
             MM.update_price()
 
         # Calculate absolute returns
-        abs_returns = [abs(x) for x in MM.return_t if abs(x)>0]
+        abs_returns = [abs(x) for x in MM.return_t if abs(x) > 0]
 
         # Fit a power law distribution to absolute returns
         fit = powerlaw.Fit(abs_returns)
@@ -143,8 +148,8 @@ def powerlaw_fit():
         # Example of multiple local minima of Kolmogorov-Smirnov distance D across xmin
         plt.figure()
         plt.plot(fit.xmins, fit.Ds, 'b', label='D')
-        plt.plot(fit.xmins, fit.sigmas,'g--', label='sigma')
-        plt.plot(fit.xmins, fit.sigmas/fit.alphas,'r--', label='sigma/alpha')
+        plt.plot(fit.xmins, fit.sigmas, 'g--', label='sigma')
+        plt.plot(fit.xmins, fit.sigmas / fit.alphas, 'r--', label='sigma/alpha')
         plt.xlabel('xmin')
         plt.title('Simulated data')
         plt.legend(loc=2)
@@ -164,7 +169,6 @@ def powerlaw_fit():
 
 
 def distibution_compare():
-
     R_pw_exps = []
     p_pw_exps = []
     R_pw_logs = []
@@ -390,7 +394,7 @@ def hill_index():
     alphas1 = []
     for j in range(101):
         MM = MarketMaker(0, 0, 0.5, 0.5)
-        for i in range(8500-1):
+        for i in range(8500 - 1):
             MM.update_price()
         abs_returns = [abs(x) for x in MM.return_t]
 
@@ -407,7 +411,7 @@ def hill_index():
         rs95 = rs[8075:]
         n95 = len(rs95)
         sum95 = 0
-        xmin95=rs[8075]
+        xmin95 = rs[8075]
         for j in range(n95):
             sum95 = sum95 + numpy.log(rs95[j] / xmin95)
         alpha95 = 1 + n95 * sum95 ** -1
@@ -418,11 +422,11 @@ def hill_index():
         s_p_abs_returns = [float(x) for x in s_p_abs]
         returns = sorted(s_p_abs_returns)
         slice = len(rs1) / len(rs)
-        nsp = len(returns) - int(slice * len(returns) )
+        nsp = len(returns) - int(slice * len(returns))
         print(nsp)
         returns1 = returns[nsp:]
         sum1 = 0
-        xmin1=returns[nsp]
+        xmin1 = returns[nsp]
         for j in range(len(returns1)):
             sum1 = sum1 + numpy.log(returns1[j] / xmin1)
         alpha1 = 1 + len(returns1) * sum1 ** -1
@@ -433,16 +437,16 @@ def hill_index():
     print('Hill Index upper 5%: ', numpy.median(alphas95))
 
 
-""" Autocorrelation function plot
+""" Autocorrelation function plot for volume , raw,abs returns, S&P raw,abs returns
 """
 
 
-def autocorrelation_returns():
+def autocorrelations():
     MM = MarketMaker(0, 0, 0.5, 0.5)
     for i in range(8500):
         MM.update_price()
     abs_returns = [abs(x) for x in MM.return_t]
-
+    squared_returns = [x ** 2 for x in MM.return_t]
     a = tsast.acf(abs_returns, nlags=99)
     b = tsast.acf(MM.return_t, nlags=99)
 
@@ -455,21 +459,47 @@ def autocorrelation_returns():
 
     c = tsast.acf(s_p_raw_returns, nlags=99)
     d = tsast.acf(s_p_abs_returns, nlags=99)
+
     plt.figure()
     plt.ylim(-0.1, 0.3)
     plt.plot(a, 'r', label='abs returns')
     plt.plot(d, 'r--', label='S&P abs returns')
     plt.plot(b, 'b', label='raw returns')
     plt.plot(c, 'b--', label='S&P raw returns')
-
     plt.axhline(0, 0, 1, color='black', ls='dotted', lw=1)
     plt.grid(True)
-    plt.title('Autocorrelation function')
+    plt.title('Returns autocorrelation function')
     plt.xlabel('lags')
-
     plt.ylabel('autocorrelation')
+    plt.legend()
+
+    v = tsast.acf(MM.volume, nlags=99)
+    plt.figure()
+    plt.plot(v, label='volume')
+    plt.axhline(0, 0, 1, color='black', ls='dotted', lw=1)
+    plt.ylim(-0.2, 0.2)
+    plt.grid(True)
+    plt.xlabel('lags')
+    plt.ylabel('autocorrelation')
+    plt.title('Volume autocorrelation function')
+    plt.ylim(-0.10, 0.10)
+    plt.legend()
+
+    sr = tsast.acf(squared_returns, nlags=100)
+    plt.figure()
+    plt.plot(sr, label='squared returns')
+    plt.axhline(0, 0, 1, color='black', ls='dotted', lw=1)
+    plt.ylim(-0.1, 0.3)
+    plt.grid(True)
+    plt.xlabel('lags')
+    plt.ylabel('autocorrelation')
+    plt.title('Squared returns autocorrelation function')
+    plt.legend()
+
+    plt.show()
 
 
+autocorrelations()
 """ Anderson-Darling Test
     Works for exponential, normal, logistic, extreme 1 and Gumbel distributions
     If A2 is larger than these critical values then for the corresponding significance level,
@@ -518,20 +548,21 @@ def kstst(distribution):
 """ Returns the Hurst Exponent used to measure long-memory of time series X
 """
 
+
 def hurst(X):
     """ Compute the Hurst exponent of X. If the output H=0.5,the behavior
     of the time-series is similar to random walk. If H<0.5, the time-series
     cover less "distance" than a random walk and vice verse.
     """
     N = len(X)
-    T = numpy.array([float(i) for i in range(1,N+1)])
+    T = numpy.array([float(i) for i in range(1, N + 1)])
     Y = numpy.cumsum(X)
-    Ave_T = Y/T
+    Ave_T = Y / T
 
     S_T = numpy.zeros((N))
     R_T = numpy.zeros((N))
     for i in range(N):
-        S_T[i] = numpy.std(X[:i+1])
+        S_T[i] = numpy.std(X[:i + 1])
         X_T = Y - T * Ave_T[i]
         R_T[i] = max(X_T[:i + 1]) - min(X_T[:i + 1])
 
@@ -541,6 +572,7 @@ def hurst(X):
     H = numpy.linalg.lstsq(n[1:], R_S[1:])[0]
     return H[0]
 
+
 """ Calculate quantiles for a probability plot, and optionally show the plot.
     Assessing how closely two data sets agree, plots the two cumulative distribution functions against each other.
     Generates a probability plot of sample data against the quantiles of a specified theoretical distribution
@@ -548,21 +580,42 @@ def hurst(X):
     The distributions are equal if and only if the plot falls on this line – any deviation indicates a difference between the distributions.
 """
 
-def probability_plot(distribution):
+
+def pp_plot(distribution):
     MM = MarketMaker(0, 0, 0.5, 0.5)
     for i in range(5999):
         MM.update_price()
-    # Calculate absolute returns
-    def power(x):
-        return (x^4)
-    abs_returns = [abs(x) for x in MM.return_t if abs(x)>0]
+
+    abs_returns = [abs(x) for x in MM.return_t if abs(x) > 0]
+
     plt.figure()
     sts.probplot(abs_returns, dist=distribution, plot=plt)
-    plt.title('P-P plot data vs '+ distribution+' distribution')
+    plt.title('P-P plot abs returns vs ' + distribution + ' distribution')
+    plt.figure()
+    sts.probplot(MM.return_t, dist=distribution, plot=plt)
+    plt.title('P-P plot raw returns vs ' + distribution + ' distribution')
+
+    with open('raw_returns.txt') as g:
+        s_p_raw = g.readlines()
+    s_p_raw_returns = [100 * float(x) for x in s_p_raw]
+    plt.figure()
+    sts.probplot(s_p_raw_returns, dist=distribution, plot=plt)
+    plt.title('P-P plot S&P raw returns vs ' + distribution + ' distribution')
+
+    with open('abs_returns.txt') as g:
+        s_p_abs = g.readlines()
+    s_p_abs_returns = [100 * float(x) for x in s_p_abs]
+    plt.figure()
+    sts.probplot(s_p_abs_returns, dist=distribution, plot=plt)
+    plt.title('P-P plot S&P abs returns vs ' + distribution + ' distribution')
+
+    plt.show()
 
 
 """ Creates histogram plots for the simulated and empirical data
 """
+
+
 def histograms():
     MM = MarketMaker(0, 0, 0.5, 0.5)
     for i in range(5999):
@@ -571,34 +624,154 @@ def histograms():
 
     with open('raw_returns.txt') as g:
         s_p_raw = g.readlines()
-    s_p_raw_returns = [100*float(x) for x in s_p_raw]
+    s_p_raw_returns = [100 * float(x) for x in s_p_raw]
+    with open('abs_returns.txt') as g:
+        s_p_abs = g.readlines()
+    s_p_abs_returns = [100 * float(x) for x in s_p_abs]
+
+    plt.figure()
+    (mu, sigma) = sts.norm.fit(MM.return_t)
+    # the histogram of the data
+    # normalized to form a probability density, i.e., n/(len(x)`dbin), i.e., the integral of the histogram will sum to 1
+    n, bins, patches = plt.hist(MM.return_t, 100, normed=1, facecolor='green', alpha=0.75)
+    # add a 'best fit' line
+    y = mlab.normpdf(bins, mu, sigma)
+    l = plt.plot(bins, y, 'r--', linewidth=2)
+    plt.xlabel('returns')
+    plt.ylabel('Probability')
+    plt.title(r'$\mathrm{Histogram\ of\ raw\ returns:}\ \mu=%.3f,\ \sigma=%.3f$' % (mu, sigma))
+    plt.grid(True)
+
+    plt.figure()
+    n, bins, patches = plt.hist(abs_returns, 100, normed=1, facecolor='green', alpha=0.75)
+    (mu, sigma) = sts.norm.fit(abs_returns)
+    plt.xlabel('volatility')
+    plt.ylabel('Probability')
+    plt.title(r'$\mathrm{Histogram\ of\ abs\ returns:}\ \mu=%.3f,\ \sigma=%.3f$' % (mu, sigma))
+
+    plt.figure()
+    n, bins, patches = plt.hist(MM.volume, 100, normed=1, facecolor='green', alpha=0.75)
+    (mu, sigma) = sts.norm.fit(MM.volume)
+    plt.xlabel('Volume')
+    plt.ylabel('Probability')
+    plt.title(r'$\mathrm{Histogram\ of\ volume}\ \mu=%.3f,\ \sigma=%.3f$' % (mu, sigma))
+    print(numpy.mean(MM.volume), numpy.std(MM.volume))
+
+    plt.figure()
+    (mu, sigma) = sts.norm.fit(s_p_raw_returns)
+    # the histogram of the data
+    # normalized to form a probability density, i.e., n/(len(x)`dbin), i.e., the integral of the histogram will sum to 1
+    n, bins, patches = plt.hist(s_p_raw_returns, 100, normed=1, facecolor='green', alpha=0.75)
+    # add a 'best fit' line
+    y = mlab.normpdf(bins, mu, sigma)
+    l = plt.plot(bins, y, 'r--', linewidth=2)
+    plt.xlabel('S&P returns')
+    plt.ylabel('Probability')
+    plt.title(r'$\mathrm{Histogram\ of\ S&P\ raw\ returns:}\ \mu=%.3f,\ \sigma=%.3f$' % (mu, sigma))
+
+    plt.figure()
+    (mu, sigma) = sts.norm.fit(s_p_abs_returns)
+    n, bins, patches = plt.hist(s_p_abs_returns, 100, normed=1, facecolor='green', alpha=0.75)
+    plt.xlabel('S&P volatility')
+    plt.ylabel('Probability')
+    plt.title(r'$\mathrm{Histogram\ of\ S&P\ abs\ returns:}\ \mu=%.3f,\ \sigma=%.3f$' % (mu, sigma))
+
+    for i in range(1):
+        MM = MarketMaker(0, 0, 0.5, 0.5)
+        for i in range(5999):
+            MM.update_price()
+
+        abs_returns = [abs(x) + 1 for x in MM.return_t if abs(x) > 0.0]
+        a, n, c = sts.pareto.fit(abs_returns)
+        plt.figure()
+        count, bins, patches = plt.hist(abs_returns, 100, normed=1, facecolor='green', alpha=0.75, label='raw returns')
+        fit = a * n * a / bins ** (a + 1)
+        plt.plot(bins + 1, max(count) * fit / ((max(fit)) * (len(bins)) * (a + 1.2)), linewidth=2, color='r',
+                 label='pareto dist')
+        plt.title('Raw returns vs Pareto distr')
+        plt.legend()
+    plt.show()
+
+
+""" Crosscorrelations between volume and returns, volatility
+"""
+
+
+def crosscorrelations():
+    MM = MarketMaker(0, 0, 0.5, 0.5)
+    for i in range(5999):
+        MM.update_price()
+    squared_returns = [x ** 2 for x in MM.return_t]
+
+    b = tsast.ccf(MM.volume, MM.volatility)
+    plt.figure()
+    plt.plot(b)
+    plt.xlabel('volume(t) and volatility(t+j)')
+    plt.ylabel('cross correlation')
+    plt.figure()
+    plt.xcorr(MM.volume, MM.volatility, usevlines=False, linestyle='-')
+    plt.xlabel('volume(t) and volatility(t+j)')
+    plt.ylabel('cross correlation')
+    plt.xticks(range(-10, 10))
+    plt.grid(True)
+
+    c = tsast.ccf(MM.volume, MM.return_t)
+    plt.figure()
+    plt.plot(c)
+    plt.xlabel('volume(t) and returns(t+j)')
+    plt.ylabel('cross correlation')
+    plt.figure()
+    plt.xcorr(MM.volume, MM.return_t, usevlines=False, linestyle='-')
+    plt.xlabel('volume(t) and returns(t+j)')
+    plt.ylabel('cross correlation')
+    plt.xticks(range(-10, 12, 2))
+    plt.grid(True)
+
+    with open('raw_returns.txt') as g:
+        s_p_raw = g.readlines()
+    s_p_raw_returns = [100 * float(x) for x in s_p_raw]
 
     with open('abs_returns.txt') as g:
         s_p_abs = g.readlines()
-    s_p_abs_returns = [100*float(x) for x in s_p_abs]
+    s_p_abs_returns = [100 * float(x) for x in s_p_abs]
 
+    s_p_sqr_returns = [100 * (float(x) ** 2) for x in s_p_raw]
+    e = tsast.ccf(squared_returns, MM.return_t)
     plt.figure()
-    plt.hist(MM.return_t,bins=200)
-    plt.title('raw returns')
+    plt.plot(e)
+    plt.xlabel('squared returns(t) and returns(t+j)')
+    plt.ylabel('cross correlation')
+    plt.figure()
+    plt.xcorr(squared_returns, MM.return_t, usevlines=False, linestyle='-', label='simulated data')
+    plt.xcorr(s_p_sqr_returns, s_p_raw_returns, usevlines=False, linestyle='-', label='S&P data')
+    plt.xlabel('squared returns(t) and returns(t+j)')
+    plt.ylabel('cross correlation')
+    plt.xticks(range(-10, 12, 2))
+    plt.grid(True)
+    plt.legend()
 
+    d = tsast.ccf(MM.volatility, MM.return_t)
     plt.figure()
-    plt.hist(abs_returns,bins=200)
-    plt.title('abs returns')
+    plt.plot(d)
+    plt.xlabel('volatility and return')
+    plt.ylabel('cross correlation')
+    plt.figure()
+    plt.xcorr(MM.volatility, MM.return_t, usevlines=False, linestyle='-', label='simulated data')
+    plt.xcorr(s_p_abs_returns, s_p_raw_returns, usevlines=False, linestyle='-', label='S&P data')
+    plt.legend()
+    plt.xlabel('volatility and return')
+    plt.ylabel('cross correlation')
+    plt.xticks(range(-10, 12, 2))
+    plt.grid(True)
 
-    plt.figure()
-    plt.hist(s_p_raw_returns,bins=150)
-    plt.title('S&P raw returns')
-
-    plt.figure()
-    plt.title('S&P abs returns')
-    plt.hist(s_p_abs_returns,bins=150)
+    plt.show()
 
 
 # hurst_abs=[]
 # hurst_raw=[]
 # for j in range(5):
-#     print (j)
-#     MM = MarketMaker(0, 0, 0.5, 0.5)
+# print (j)
+# MM = MarketMaker(0, 0, 0.5, 0.5)
 #     for i in range(8500-1):
 #         MM.update_price()
 #     abs_returns = [abs(x) for x in MM.return_t]
