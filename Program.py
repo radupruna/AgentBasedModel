@@ -15,10 +15,55 @@ class Chartist:
     sigma_c = 2.147
     epsilon_c = 0
 
-    def demand(self, pt):
+    def __init__(self):
+        self.dc = []
+        self.ut = []
+
+    def update_demand(self, pt):
         self.epsilon_c = numpy.random.normal(0, self.sigma_c)
         demand = self.chi * (pt[-1] - pt[-2]) + self.epsilon_c
+        self.dc.append(demand)
         return demand
+
+    def update_utility(self,pt,demand):
+        self.ut.append((pt[-1]-pt[-2])*demand[-1])
+
+""" Simple Moving Averages MA(n)
+"""
+
+
+class SMA:
+
+    def __init__(self, pt, n):
+        self.MA= []
+        self.n=n
+        self.pt=pt
+
+    def update_averages(self):
+        if(len(self.pt)>=self.n):
+            self.MA.append(numpy.average( self.pt[(len(self.pt)-self.n) : len(self.pt)] ))
+
+
+
+""" Exponential Moving Averages EMA(n)
+"""
+
+
+class EMA:
+
+    def __init__(self, pt, n):
+        self.EMA= []
+        self.n = n
+        self.pt = pt
+        self.alpha = 2 / (n+1)
+
+    def update_averages(self):
+        if(len(self.pt) == self.n):
+            FirstEMA = numpy.average(self.pt[0 : len(self.pt)])
+            self.EMA.append(FirstEMA)
+        elif(len(self.pt)>self.n):
+            EMA_today = (self.pt[-1] - self.EMA[-1] )* self.alpha + self.EMA[-1]
+            self.EMA.append(EMA_today)
 
 
 class Fundamentalist:
@@ -27,11 +72,17 @@ class Fundamentalist:
     p_f = 0
     epsilon_f = 0
 
-    def demand(self, pt):
+    def __init__(self):
+        self.df = []
+        self.ut = []
+
+    def update_demand(self, pt):
         self.epsilon_f = numpy.random.normal(0, self.sigma_f)
         demand = self.phi * (self.p_f - pt[-1]) + self.epsilon_f
         return demand
 
+    def update_utility(self,pt,demand):
+        self.ut.append((pt[-1]-pt[-2])*demand[-1])
 
 class MarketMaker:
     def __init__(self, p_0, p_1, nf_0, nc_0):
@@ -56,12 +107,14 @@ class MarketMaker:
         self.fund = Fundamentalist()
         self.chart = Chartist()
 
-    def update_demands(self):
-        self.df.append(self.fund.demand(self.price_t))
-        self.dc.append(self.chart.demand(self.price_t))
+        self.simple_MA = SMA(self.price_t, 50)
+        self.exp_MA = EMA(self.price_t, 50)
 
-    @staticmethod
-    def get_attractiveness(p_f, x_t, p_t):
+    def update_demands(self):
+        self.df.append(self.fund.update_demand(self.price_t))
+        self.dc.append(self.chart.update_demand(self.price_t))
+
+    def get_attractiveness(self,p_f, x_t, p_t):
         alpha_0 = -0.336
         alpha_n = 1.839
         alpha_p = 19.671
@@ -79,14 +132,50 @@ class MarketMaker:
     def update_price(self):
         mu = 0.01
         self.update_demands()
-        self.volume.append(abs(self.dc[-1]) + abs(self.df[-1]))
         a = self.get_attractiveness(self.pf, self.x_t[-1], self.price_t[-1])
         self.attract.append(a)
         self.update_fractions(a)
         price = self.price_t[-1] + mu * (self.dc[-1] * self.nc[-1] + self.df[-1] * self.nf[-1])
         self.price_t.append(price)
+
+        self.simple_MA.update_averages()
+        self.exp_MA.update_averages()
+        self.volume.append(abs(self.dc[-1]) + abs(self.df[-1]))
         self.return_t.append(100 * (self.price_t[-1] - self.price_t[-2]))
         self.volatility.append((abs(self.return_t[-1])))
+        self.fund.update_utility(self.price_t,self.df)
+        self.chart.update_utility(self.price_t,self.dc)
+
+
+MM = MarketMaker(0, 0, 0.5, 0.5)
+for i in range(5999):
+    MM.update_price()
+
+
+plt.figure()
+plt.hist(MM.volatility)
+plt.axhline(0, 0, 1, color='black', ls='dotted', lw=1)
+
+plt.figure()
+plt.plot(MM.price_t)
+plt.axhline(0, 0, 1, color='black', ls='dotted', lw=1)
+
+plt.figure()
+plt.plot(MM.x_t)
+plt.axhline(0, 0, 1, color='black', ls='dotted', lw=1)
+
+plt.figure()
+plt.plot(MM.fund.ut,label='fund ut')
+plt.plot(MM.chart.ut,label='chart ut')
+plt.axhline(0, 0, 1, color='black', ls='dotted', lw=1)
+plt.legend()
+plt.show()
+# plt.figure()
+# plt.plot(MM.price_t[0:500],label= 'price')
+# plt.plot(MM.simple_MA.MA[0:500],label='SMA')
+# plt.plot(MM.exp_MA.EMA[0:500],label='EMA')
+# plt.legend()
+# plt.show()
 
 
 """ Fit a powerlaw distribution p(x) = x^-alpha to simulated data and S&P 500 data.
@@ -499,7 +588,6 @@ def autocorrelations():
     plt.show()
 
 
-autocorrelations()
 """ Anderson-Darling Test
     Works for exponential, normal, logistic, extreme 1 and Gumbel distributions
     If A2 is larger than these critical values then for the corresponding significance level,
@@ -693,7 +781,7 @@ def histograms():
     plt.show()
 
 
-""" Crosscorrelations between volume and returns, volatility
+""" Crosscorrelations between volume, returns, volatility, squared returns
 """
 
 
