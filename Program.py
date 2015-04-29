@@ -35,13 +35,13 @@ class Chartist:
 class SMA:
 
     def __init__(self, pt, n):
-        self.MA= []
+        self.averages= []
         self.n=n
         self.pt=pt
 
     def update_averages(self):
         if(len(self.pt)>=self.n):
-            self.MA.append(numpy.average( self.pt[(len(self.pt)-self.n) : len(self.pt)] ))
+            self.averages.append(numpy.average( self.pt[(len(self.pt)-self.n) : len(self.pt)] ))
 
 
 
@@ -52,7 +52,7 @@ class SMA:
 class EMA:
 
     def __init__(self, pt, n):
-        self.EMA= []
+        self.averages= []
         self.n = n
         self.pt = pt
         self.alpha = 2 / (n+1)
@@ -60,10 +60,10 @@ class EMA:
     def update_averages(self):
         if(len(self.pt) == self.n):
             FirstEMA = numpy.average(self.pt[0 : len(self.pt)])
-            self.EMA.append(FirstEMA)
+            self.averages.append(FirstEMA)
         elif(len(self.pt)>self.n):
-            EMA_today = (self.pt[-1] - self.EMA[-1] )* self.alpha + self.EMA[-1]
-            self.EMA.append(EMA_today)
+            EMA_today = (self.pt[-1] - self.averages[-1] )* self.alpha + self.averages[-1]
+            self.averages.append(EMA_today)
 
 
 class Fundamentalist:
@@ -91,8 +91,7 @@ class MarketMaker:
         self.nf = []  # Market Fraction of Fundamentalists
         self.nc = []  # Market Fraction of Technical Analysts
         self.x_t = []  # Majority index
-        self.df = []  # Demands of Fundamentalists
-        self.dc = []  # Demands of Chartists
+
         self.volume = []
         self.attract = []  # Attractiveness Levels
         self.return_t = []  # Returns
@@ -104,11 +103,19 @@ class MarketMaker:
         self.nc.append(nc_0)
         self.x_t.append(nf_0 - nc_0)
 
+    def add_fund(self):
         self.fund = Fundamentalist()
-        self.chart = Chartist()
+        self.df = []  # Demands of Fundamentalists
 
-        self.simple_MA = SMA(self.price_t, 50)
-        self.exp_MA = EMA(self.price_t, 50)
+    def add_chart(self):
+        self.chart = Chartist()
+        self.dc = []  # Demands of Chartists
+
+    def add_SMA(self,n):
+        self.SMA10 = SMA(self.price_t, 10)
+        self.SMA50 = SMA(self.price_t, 50)
+        self.EMA10 = EMA(self.price_t,10)
+        self.EMA50 = EMA(self.price_t, 50)
 
     def update_demands(self):
         self.df.append(self.fund.update_demand(self.price_t))
@@ -138,38 +145,40 @@ class MarketMaker:
         price = self.price_t[-1] + mu * (self.dc[-1] * self.nc[-1] + self.df[-1] * self.nf[-1])
         self.price_t.append(price)
 
-        self.simple_MA.update_averages()
-        self.exp_MA.update_averages()
+        self.SMA10.update_averages()
+        self.SMA50.update_averages()
+        self.EMA10.update_averages()
+        self.EMA50.update_averages()
+
         self.volume.append(abs(self.dc[-1]) + abs(self.df[-1]))
         self.return_t.append(100 * (self.price_t[-1] - self.price_t[-2]))
         self.volatility.append((abs(self.return_t[-1])))
         self.fund.update_utility(self.price_t,self.df)
         self.chart.update_utility(self.price_t,self.dc)
 
-
 MM = MarketMaker(0, 0, 0.5, 0.5)
 for i in range(5999):
     MM.update_price()
-
-
-plt.figure()
-plt.hist(MM.volatility)
-plt.axhline(0, 0, 1, color='black', ls='dotted', lw=1)
-
 plt.figure()
 plt.plot(MM.price_t)
 plt.axhline(0, 0, 1, color='black', ls='dotted', lw=1)
-
-plt.figure()
-plt.plot(MM.x_t)
-plt.axhline(0, 0, 1, color='black', ls='dotted', lw=1)
-
-plt.figure()
-plt.plot(MM.fund.ut,label='fund ut')
-plt.plot(MM.chart.ut,label='chart ut')
-plt.axhline(0, 0, 1, color='black', ls='dotted', lw=1)
+plt.plot(MM.EMA10.averages,label='EMA10')
+plt.plot(MM.EMA50.averages,label='EMA50')
 plt.legend()
 plt.show()
+
+
+#
+# plt.figure()
+# plt.plot(MM.x_t)
+# plt.axhline(0, 0, 1, color='black', ls='dotted', lw=1)
+#
+# plt.figure()
+# plt.plot(MM.fund.ut,label='fund ut')
+# plt.plot(MM.chart.ut,label='chart ut')
+# plt.axhline(0, 0, 1, color='black', ls='dotted', lw=1)
+# plt.legend()
+# plt.show()
 # plt.figure()
 # plt.plot(MM.price_t[0:500],label= 'price')
 # plt.plot(MM.simple_MA.MA[0:500],label='SMA')
@@ -545,6 +554,7 @@ def autocorrelations():
         s_p_abs = g.readlines()
     s_p_raw_returns = [float(x) for x in s_p_raw]
     s_p_abs_returns = [float(x) for x in s_p_abs]
+    s_p_squared_returns = [x ** 2 for x in s_p_raw_returns]
 
     c = tsast.acf(s_p_raw_returns, nlags=99)
     d = tsast.acf(s_p_abs_returns, nlags=99)
@@ -574,15 +584,17 @@ def autocorrelations():
     plt.ylim(-0.10, 0.10)
     plt.legend()
 
-    sr = tsast.acf(squared_returns, nlags=100)
+    sr = tsast.acf(squared_returns, nlags=30)
+    spsr = tsast.acf(s_p_squared_returns,nlags=30)
     plt.figure()
-    plt.plot(sr, label='squared returns')
+    plt.ylim(-0.1, 0.4)
+    plt.plot(sr, 'r', label='squared returns')
+    plt.plot(spsr, 'r--', label='S&P squared returns')
     plt.axhline(0, 0, 1, color='black', ls='dotted', lw=1)
-    plt.ylim(-0.1, 0.3)
     plt.grid(True)
+    plt.title('Squared returns autocorrelation function')
     plt.xlabel('lags')
     plt.ylabel('autocorrelation')
-    plt.title('Squared returns autocorrelation function')
     plt.legend()
 
     plt.show()
