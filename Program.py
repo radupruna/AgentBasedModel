@@ -6,7 +6,7 @@ import scipy
 from scipy.optimize import curve_fit
 import powerlaw.powerlaw as powerlaw
 import matplotlib.mlab as mlab
-
+from networkx.utils import powerlaw_sequence
 from statsmodels.tsa import stattools as tsast
 
 
@@ -25,24 +25,23 @@ class Chartist:
         self.dc.append(demand)
         return demand
 
-    def update_utility(self,pt,demand):
-        self.ut.append((pt[-1]-pt[-2])*demand[-1])
+    def update_utility(self, pt, demand):
+        self.ut.append((pt[-1] - pt[-2]) * demand[-1])
+
 
 """ Simple Moving Averages MA(n)
 """
 
 
 class SMA:
-
     def __init__(self, pt, n):
-        self.averages= []
-        self.n=n
-        self.pt=pt
+        self.averages = []
+        self.n = n
+        self.pt = pt
 
     def update_averages(self):
-        if(len(self.pt)>=self.n):
-            self.averages.append(numpy.average( self.pt[(len(self.pt)-self.n) : len(self.pt)] ))
-
+        if (len(self.pt) >= self.n):
+            self.averages.append(numpy.average(self.pt[(len(self.pt) - self.n): len(self.pt)]))
 
 
 """ Exponential Moving Averages EMA(n)
@@ -50,19 +49,18 @@ class SMA:
 
 
 class EMA:
-
     def __init__(self, pt, n):
-        self.averages= []
+        self.averages = []
         self.n = n
         self.pt = pt
-        self.alpha = 2 / (n+1)
+        self.alpha = 2 / (n + 1)
 
     def update_averages(self):
-        if(len(self.pt) == self.n):
-            FirstEMA = numpy.average(self.pt[0 : len(self.pt)])
+        if (len(self.pt) == self.n):
+            FirstEMA = numpy.average(self.pt[0: len(self.pt)])
             self.averages.append(FirstEMA)
-        elif(len(self.pt)>self.n):
-            EMA_today = (self.pt[-1] - self.averages[-1] )* self.alpha + self.averages[-1]
+        elif (len(self.pt) > self.n):
+            EMA_today = (self.pt[-1] - self.averages[-1] ) * self.alpha + self.averages[-1]
             self.averages.append(EMA_today)
 
 
@@ -81,8 +79,9 @@ class Fundamentalist:
         demand = self.phi * (self.p_f - pt[-1]) + self.epsilon_f
         return demand
 
-    def update_utility(self,pt,demand):
-        self.ut.append((pt[-1]-pt[-2])*demand[-1])
+    def update_utility(self, pt, demand):
+        self.ut.append((pt[-1] - pt[-2]) * demand[-1])
+
 
 class MarketMaker:
     def __init__(self, p_0, p_1, nf_0, nc_0):
@@ -91,7 +90,8 @@ class MarketMaker:
         self.nf = []  # Market Fraction of Fundamentalists
         self.nc = []  # Market Fraction of Technical Analysts
         self.x_t = []  # Majority index
-
+        self.df = []  # Demands of Fundamentalists
+        self.dc = []  # Demands of Chartists
         self.volume = []
         self.attract = []  # Attractiveness Levels
         self.return_t = []  # Returns
@@ -103,25 +103,18 @@ class MarketMaker:
         self.nc.append(nc_0)
         self.x_t.append(nf_0 - nc_0)
 
-    def add_fund(self):
         self.fund = Fundamentalist()
-        self.df = []  # Demands of Fundamentalists
-
-    def add_chart(self):
         self.chart = Chartist()
-        self.dc = []  # Demands of Chartists
 
-    def add_SMA(self,n):
-        self.SMA10 = SMA(self.price_t, 10)
-        self.SMA50 = SMA(self.price_t, 50)
-        self.EMA10 = EMA(self.price_t,10)
-        self.EMA50 = EMA(self.price_t, 50)
+        self.SMA200 = SMA(self.price_t, 200)
+        self.EMA12 = SMA(self.price_t, 12)
+        self.EMA26 = EMA(self.price_t, 26)
 
     def update_demands(self):
         self.df.append(self.fund.update_demand(self.price_t))
         self.dc.append(self.chart.update_demand(self.price_t))
 
-    def get_attractiveness(self,p_f, x_t, p_t):
+    def get_attractiveness(self, p_f, x_t, p_t):
         alpha_0 = -0.336
         alpha_n = 1.839
         alpha_p = 19.671
@@ -145,46 +138,16 @@ class MarketMaker:
         price = self.price_t[-1] + mu * (self.dc[-1] * self.nc[-1] + self.df[-1] * self.nf[-1])
         self.price_t.append(price)
 
-        self.SMA10.update_averages()
-        self.SMA50.update_averages()
-        self.EMA10.update_averages()
-        self.EMA50.update_averages()
+        self.SMA200.update_averages()
+
+        self.EMA12.update_averages()
+        self.EMA26.update_averages()
 
         self.volume.append(abs(self.dc[-1]) + abs(self.df[-1]))
         self.return_t.append(100 * (self.price_t[-1] - self.price_t[-2]))
         self.volatility.append((abs(self.return_t[-1])))
-        self.fund.update_utility(self.price_t,self.df)
-        self.chart.update_utility(self.price_t,self.dc)
-
-MM = MarketMaker(0, 0, 0.5, 0.5)
-for i in range(5999):
-    MM.update_price()
-plt.figure()
-plt.plot(MM.price_t)
-plt.axhline(0, 0, 1, color='black', ls='dotted', lw=1)
-plt.plot(MM.EMA10.averages,label='EMA10')
-plt.plot(MM.EMA50.averages,label='EMA50')
-plt.legend()
-plt.show()
-
-
-#
-# plt.figure()
-# plt.plot(MM.x_t)
-# plt.axhline(0, 0, 1, color='black', ls='dotted', lw=1)
-#
-# plt.figure()
-# plt.plot(MM.fund.ut,label='fund ut')
-# plt.plot(MM.chart.ut,label='chart ut')
-# plt.axhline(0, 0, 1, color='black', ls='dotted', lw=1)
-# plt.legend()
-# plt.show()
-# plt.figure()
-# plt.plot(MM.price_t[0:500],label= 'price')
-# plt.plot(MM.simple_MA.MA[0:500],label='SMA')
-# plt.plot(MM.exp_MA.EMA[0:500],label='EMA')
-# plt.legend()
-# plt.show()
+        self.fund.update_utility(self.price_t, self.df)
+        self.chart.update_utility(self.price_t, self.dc)
 
 
 """ Fit a powerlaw distribution p(x) = x^-alpha to simulated data and S&P 500 data.
@@ -545,6 +508,7 @@ def autocorrelations():
         MM.update_price()
     abs_returns = [abs(x) for x in MM.return_t]
     squared_returns = [x ** 2 for x in MM.return_t]
+
     a = tsast.acf(abs_returns, nlags=99)
     b = tsast.acf(MM.return_t, nlags=99)
 
@@ -559,6 +523,23 @@ def autocorrelations():
     c = tsast.acf(s_p_raw_returns, nlags=99)
     d = tsast.acf(s_p_abs_returns, nlags=99)
 
+    fitAbs = powerlaw.Fit(a)
+    alpha = fitAbs.power_law.alpha
+    print('alpha abs: ', fitAbs.power_law.alpha)
+    pl_sequence = powerlaw_sequence(100, exponent=alpha)
+    pl_sequence.sort(reverse=True)
+    pl_sequence = [x / 10 for x in pl_sequence]
+
+    plt.figure()
+    beta=1/alpha
+    plt.plot(a, 'r', label='abs returns')
+    plt.plot(pl_sequence, label='shifted power law beta = %f' % beta)
+    plt.plot(d, 'r--', label='S&P abs returns')
+    plt.title('Absolute returns autocorrelation decay')
+    plt.xlabel('lags')
+    plt.ylabel('autocorrelation')
+    plt.legend()
+
     plt.figure()
     plt.ylim(-0.1, 0.3)
     plt.plot(a, 'r', label='abs returns')
@@ -572,11 +553,10 @@ def autocorrelations():
     plt.ylabel('autocorrelation')
     plt.legend()
 
-    v = tsast.acf(MM.volume, nlags=99)
+    v = tsast.acf(MM.volume, nlags=10)
     plt.figure()
     plt.plot(v, label='volume')
     plt.axhline(0, 0, 1, color='black', ls='dotted', lw=1)
-    plt.ylim(-0.2, 0.2)
     plt.grid(True)
     plt.xlabel('lags')
     plt.ylabel('autocorrelation')
@@ -584,8 +564,8 @@ def autocorrelations():
     plt.ylim(-0.10, 0.10)
     plt.legend()
 
-    sr = tsast.acf(squared_returns, nlags=30)
-    spsr = tsast.acf(s_p_squared_returns,nlags=30)
+    sr = tsast.acf(squared_returns, nlags=100)
+    spsr = tsast.acf(s_p_squared_returns, nlags=100)
     plt.figure()
     plt.ylim(-0.1, 0.4)
     plt.plot(sr, 'r', label='squared returns')
@@ -597,6 +577,22 @@ def autocorrelations():
     plt.ylabel('autocorrelation')
     plt.legend()
 
+    fitSq = powerlaw.Fit(sr)
+    alphaSq = fitAbs.power_law.alpha
+    print('alpha abs: ', fitSq.power_law.alpha)
+    pl_sequence_sq = powerlaw_sequence(100, exponent=alphaSq)
+    pl_sequence_sq.sort(reverse=True)
+    pl_sequence_sq = [x / 10 for x in pl_sequence_sq]
+
+    plt.figure()
+    betaSq=1/alphaSq
+    plt.plot(sr, 'r', label='squared returns')
+    plt.plot(spsr, 'r--', label='S&P squared returns')
+    plt.plot(pl_sequence_sq, label='shifted power law beta = %f' % betaSq)
+    plt.title('Squared returns autocorrelation decay')
+    plt.xlabel('lags')
+    plt.ylabel('autocorrelation')
+    plt.legend()
     plt.show()
 
 
@@ -790,6 +786,7 @@ def histograms():
                  label='pareto dist')
         plt.title('Raw returns vs Pareto distr')
         plt.legend()
+
     plt.show()
 
 
@@ -802,6 +799,23 @@ def crosscorrelations():
     for i in range(5999):
         MM.update_price()
     squared_returns = [x ** 2 for x in MM.return_t]
+
+    # Leverage Effect
+    plt.figure()
+    plt.xcorr(squared_returns, MM.return_t, maxlags=200, usevlines=False, linestyle='-')
+    plt.xlabel('return(t+j) and squared_return(j)')
+    plt.ylabel('cross correlation')
+    plt.xlim(0,200)
+    plt.grid(True)
+    plt.legend()
+
+    plt.figure()
+    plt.xcorr(squared_returns, MM.return_t, maxlags=200, usevlines=False, linestyle='-')
+    plt.xlabel('return(t+j) and squared_return(j)')
+    plt.ylabel('cross correlation')
+    plt.xlim(-200,0)
+    plt.grid(True)
+    plt.legend()
 
     b = tsast.ccf(MM.volume, MM.volatility)
     plt.figure()
@@ -867,13 +881,129 @@ def crosscorrelations():
     plt.show()
 
 
+""" Aggregational Gaussainity - increase time over which returns are calculated their dist looks more and more
+    like a normal distribution.
+    In particular, the shape of the dist is not the same at different time scales
+"""
+
+
+def aggregational_gauss():
+    kurt1 = []
+    kurt10 = []
+    kurt25 = []
+    kurt50 = []
+    kurt100 = []
+    skew1 = []
+    skew10 = []
+    skew25 = []
+    skew50 = []
+    skew100= []
+
+    for j in range(100):
+        price10=[]
+        returns10 = []
+        price25=[]
+        returns25 = []
+        price50=[]
+        returns50 = []
+        price100=[]
+        returns100 = []
+
+        MM = MarketMaker(0, 0, 0.5, 0.5)
+        for i in range(5999):
+            MM.update_price()
+
+        returns1 = MM.return_t
+
+        for i in range(0, len(MM.price_t), 10):
+            price10.append(MM.price_t[i])
+        for i in range(0, len(MM.price_t), 25):
+            price25.append(MM.price_t[i])
+        for i in range(0, len(MM.price_t), 50):
+            price50.append(MM.price_t[i])
+        for i in range(0, len(MM.price_t), 100):
+            price100.append(MM.price_t[i])
+
+        for i in range(1, len(price10)):
+            returns10.append(100 * (price10[i] - price10[i-1]))
+        for i in range(1, len(price25)):
+            returns25.append(100 * (price25[i] - price25[i-1]))
+        for i in range(1, len(price50)):
+            returns50.append(100 * (price50[i] - price50[i-1]))
+        for i in range(1, len(price100)):
+            returns100.append(100 * (price100[i] - price100[i-1]))
+
+        kurt1.append(sts.kurtosis(returns1))
+        skew1.append(sts.skew(returns1))
+        kurt10.append(sts.kurtosis(returns10))
+        skew10.append(sts.skew(returns10))
+        kurt25.append(sts.kurtosis(returns25))
+        skew25.append(sts.skew(returns25))
+        kurt50.append(sts.kurtosis(returns50))
+        skew50.append(sts.skew(returns50))
+        kurt100.append(sts.kurtosis(returns100))
+        skew100.append(sts.skew(returns100))
+
+    n1, bins1, patches1 = plt.hist(returns1, 50, normed=1,  alpha=0.75, label='time lag = 1')
+    n10, bins110, patches10 = plt.hist(returns10, 50, normed=1, alpha=0.75,label='time lag = 10')
+    n25, bins25, patches25 = plt.hist(returns25, 50, normed=1,  alpha=0.75,label='time lag = 25')
+    n50, bins50, patches50 = plt.hist(returns50, 50, normed=1,  alpha=0.75,label='time lag = 50')
+    plt.title('Returns Histogram')
+    plt.xlabel('Smarts')
+    plt.ylabel('Probalility')
+    plt.legend()
+    plt.show()
+
+    print('Kurtosis 1: ', float("{0:.4f}".format(numpy.median(kurt1))))
+    print('Skewness 1: ', float("{0:.4f}".format(numpy.median(skew1))))
+    print('Kurtosis 10: ', float("{0:.4f}".format(numpy.median(kurt10))))
+    print('Skewness 10: ', float("{0:.4f}".format(numpy.median(skew10))))
+    print('Kurtosis 25: ', float("{0:.4f}".format(numpy.median(kurt25))))
+    print('Skewness 25: ', float("{0:.4f}".format(numpy.median(skew25))))
+    print('Kurtosis 50: ', float("{0:.4f}".format(numpy.median(kurt50))))
+    print('Skewness 50: ', float("{0:.4f}".format(numpy.median(skew50))))
+    print('Kurtosis 100: ', float("{0:.4f}".format(numpy.median(kurt100))))
+    print('Skewness 100: ', float("{0:.4f}".format(numpy.median(skew100))))
+
+
+MM = MarketMaker(0, 0, 0.5, 0.5)
+for i in range(6000):
+    MM.update_price()
+price_impact = numpy.sort(MM.price_t[2:])
+volume = numpy.sort(MM.volume)
+
+plt.figure()
+plt.plot(volume,price_impact)
+plt.xlabel("volume")
+plt.ylabel("price impact")
+
+plt.show()
+#
+# plt.figure()
+# plt.plot(MM.x_t)
+# plt.axhline(0, 0, 1, color='black', ls='dotted', lw=1)
+#
+# plt.figure()
+# plt.plot(MM.fund.ut,label='fund ut')
+# plt.plot(MM.chart.ut,label='chart ut')
+# plt.axhline(0, 0, 1, color='black', ls='dotted', lw=1)
+# plt.legend()
+# plt.show()
+# plt.figure()
+# plt.plot(MM.price_t[0:500],label= 'price')
+# plt.plot(MM.simple_MA.MA[0:500],label='SMA')
+# plt.plot(MM.exp_MA.EMA[0:500],label='EMA')
+# plt.legend()
+# plt.show()
+
+
 # hurst_abs=[]
 # hurst_raw=[]
 # for j in range(5):
 # print (j)
 # MM = MarketMaker(0, 0, 0.5, 0.5)
-#     for i in range(8500-1):
-#         MM.update_price()
+# for i in range(8500-1):
+# MM.update_price()
 #     abs_returns = [abs(x) for x in MM.return_t]
 #     hurst_abs.append(hurst(abs_returns))
 #     hurst_raw.append(hurst(MM.return_t))
