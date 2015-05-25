@@ -67,16 +67,15 @@ class EMA:
 class Fundamentalist:
     phi = 0.12
     sigma_f = 0.708
-    p_f = 0
     epsilon_f = 0
 
     def __init__(self):
         self.df = []
         self.ut = []
 
-    def update_demand(self, pt):
+    def update_demand(self, pf, pt):
         self.epsilon_f = numpy.random.normal(0, self.sigma_f)
-        demand = self.phi * (self.p_f - pt[-1]) + self.epsilon_f
+        demand = self.phi * (pf[-1] - pt[-1]) + self.epsilon_f
         return demand
 
     def update_utility(self, pt, demand):
@@ -85,7 +84,7 @@ class Fundamentalist:
 
 class MarketMaker:
     def __init__(self, p_0, p_1, nf_0, nc_0):
-        self.pf = 0  # Fundamental price
+        self.pf = []
         self.price_t = []  # Price series
         self.nf = []  # Market Fraction of Fundamentalists
         self.nc = []  # Market Fraction of Technical Analysts
@@ -97,6 +96,8 @@ class MarketMaker:
         self.return_t = []  # Returns
         self.volatility = []
 
+        pf_0=1
+        self.pf.append(pf_0)
         self.price_t.append(p_0)
         self.price_t.append(p_1)
         self.nf.append(nf_0)
@@ -106,12 +107,12 @@ class MarketMaker:
         self.fund = Fundamentalist()
         self.chart = Chartist()
 
-        self.SMA200 = SMA(self.price_t, 200)
-        self.EMA12 = SMA(self.price_t, 12)
-        self.EMA26 = EMA(self.price_t, 26)
+        # self.SMA200 = SMA(self.price_t, 200)
+        # self.EMA12 = SMA(self.price_t, 12)
+        # self.EMA26 = EMA(self.price_t, 26)
 
     def update_demands(self):
-        self.df.append(self.fund.update_demand(self.price_t))
+        self.df.append(self.fund.update_demand(self.pf, self.price_t))
         self.dc.append(self.chart.update_demand(self.price_t))
 
     def get_attractiveness(self, p_f, x_t, p_t):
@@ -129,25 +130,47 @@ class MarketMaker:
         self.nc.append(n_c)
         self.x_t.append(n_f - n_c)
 
+
     def update_price(self):
         mu = 0.01
         self.update_demands()
-        a = self.get_attractiveness(self.pf, self.x_t[-1], self.price_t[-1])
+        a = self.get_attractiveness(self.pf[-1], self.x_t[-1], self.price_t[-1])
         self.attract.append(a)
         self.update_fractions(a)
+
+        m = 0.015  #drift
+        sig = 0.075 #volatility
+        fund_price = generate_next_gbm(self.pf[-1], m, sig)
+        self.pf.append(fund_price)
+
         price = self.price_t[-1] + mu * (self.dc[-1] * self.nc[-1] + self.df[-1] * self.nf[-1])
         self.price_t.append(price)
 
-        self.SMA200.update_averages()
+        # self.SMA200.update_averages()
+        # self.EMA12.update_averages()
+        # self.EMA26.update_averages()
 
-        self.EMA12.update_averages()
-        self.EMA26.update_averages()
-
-        self.volume.append(abs(self.dc[-1]) + abs(self.df[-1]))
+        self.volume.append(abs(self.dc[-1] * self.nc[-1]) + abs(self.df[-1] * self.nf[-1]))
         self.return_t.append(100 * (self.price_t[-1] - self.price_t[-2]))
         self.volatility.append((abs(self.return_t[-1])))
         self.fund.update_utility(self.price_t, self.df)
         self.chart.update_utility(self.price_t, self.dc)
+
+
+"""Geometric Brownian Motion prices
+    delta is the duration in days between each generated price, and sigma and mu are annualised values - i.e. delta = 1.0 generates daily prices.
+    \mu ('the percentage drift') and  \sigma ('the percentage volatility')
+"""
+
+
+def generate_next_gbm(prevSt, mu, sigma):
+    delta = 1
+    DAYS_PER_YEAR = 252.0
+    t = delta / DAYS_PER_YEAR
+    W = numpy.random.normal(0, 1) * numpy.sqrt(t)
+    Y = (mu - 0.5 * sigma ** 2) * t + sigma * W
+    price = prevSt * numpy.exp(Y)
+    return price
 
 
 """ Fit a powerlaw distribution p(x) = x^-alpha to simulated data and S&P 500 data.
@@ -163,39 +186,39 @@ def powerlaw_fit():
     sigmas = []
     Ds = []
 
-    with open('abs_returns.txt') as g:
-        s_p_abs = g.readlines()
-    s_p_abs_returns = [float(x) for x in s_p_abs if float(x) > 0]
-
-    fitSP = powerlaw.Fit(s_p_abs_returns)
-    print('xmin S&P: ', fitSP.xmin)
-    print('alpha S&P: ', fitSP.power_law.alpha)
-    print('sigma S&P: ', fitSP.power_law.sigma)
-    print('D S&P: ', fitSP.power_law.D)
-
-    # Example of multiple local minima of Kolmogorov-Smirnov distance D across xmin
-    plt.figure()
-    plt.plot(fitSP.xmins, fitSP.Ds, 'b', label='D')
-    plt.plot(fitSP.xmins, fitSP.sigmas, 'g--', label='sigma')
-    plt.plot(fitSP.xmins, fitSP.sigmas / fitSP.alphas, 'r--', label='sigma/alpha')
-    plt.xlabel('xmin')
-    plt.title('S&P 500 data')
-    plt.legend(loc=2)
-    plt.ylim(0, 0.6)
+    # with open('abs_returns.txt') as g:
+    #     s_p_abs = g.readlines()
+    # s_p_abs_returns = [float(x) for x in s_p_abs if float(x) > 0]
+    # s_p_squared_returns = [x ** 2 for x in s_p_abs_returns]
+    # d = tsast.acf(s_p_squared_returns, nlags=99)
+    # fitSP = powerlaw.Fit(d)
+    # print('xmin S&P: ', fitSP.xmin)
+    # print('alpha S&P: ', fitSP.power_law.alpha)
+    # print('sigma S&P: ', fitSP.power_law.sigma)
+    # print('D S&P: ', fitSP.power_law.D)
+    #
+    # # Example of multiple local minima of Kolmogorov-Smirnov distance D across xmin
+    # plt.figure()
+    # plt.plot(fitSP.xmins, fitSP.Ds, 'b', label='D')
+    # plt.plot(fitSP.xmins, fitSP.sigmas, 'g--', label='sigma')
+    # plt.plot(fitSP.xmins, fitSP.sigmas / fitSP.alphas, 'r--', label='sigma/alpha')
+    # plt.xlabel('xmin')
+    # plt.title('S&P 500 data')
+    # plt.legend(loc=2)
+    # plt.ylim(0, 0.6)
 
     for j in range(1):
-        MM = MarketMaker(0, 0, 0.5, 0.5)
+        MM = MarketMaker(1, 1, 0.5, 0.5)
         print('Iteration: ', j)
-        for i in range(5999):
+        for i in range(6000):
             MM.update_price()
 
         # Calculate absolute returns
         abs_returns = [abs(x) for x in MM.return_t if abs(x) > 0]
 
         # Fit a power law distribution to absolute returns
-        fit = powerlaw.Fit(abs_returns)
+        fit = powerlaw.Fit(MM.volume)
         # Calculating best minimal value for power law fit
-
         xmin = fit.xmin
         alpha = fit.power_law.alpha
         sigma = fit.power_law.sigma
@@ -207,14 +230,14 @@ def powerlaw_fit():
         Ds.append(D)
 
         # Example of multiple local minima of Kolmogorov-Smirnov distance D across xmin
-        plt.figure()
-        plt.plot(fit.xmins, fit.Ds, 'b', label='D')
-        plt.plot(fit.xmins, fit.sigmas, 'g--', label='sigma')
-        plt.plot(fit.xmins, fit.sigmas / fit.alphas, 'r--', label='sigma/alpha')
-        plt.xlabel('xmin')
-        plt.title('Simulated data')
-        plt.legend(loc=2)
-        plt.ylim(0, 0.6)
+        # plt.figure()
+        # plt.plot(fit.xmins, fit.Ds, 'b', label='D')
+        # plt.plot(fit.xmins, fit.sigmas, 'g--', label='sigma')
+        # plt.plot(fit.xmins, fit.sigmas / fit.alphas, 'r--', label='sigma/alpha')
+        # plt.xlabel('xmin')
+        # plt.title('Simulated data')
+        # plt.legend(loc=2)
+        # plt.ylim(0, 0.6)
 
     print('xmin: ', numpy.median(xmins))
     print('alpha: ', numpy.median(alphas))
@@ -405,10 +428,10 @@ def kurt_skew():
     print('S&P Kurtosis:', sts.kurtosis(s_p_raw_returns))
     print('S&P Skewness:', sts.skew(s_p_raw_returns))
 
-    for j in range(10000):
-        MM = MarketMaker(0, 0, 0.5, 0.5)
+    for j in range(500):
+        MM = MarketMaker(1, 1, 0.5, 0.5)
         print('iteration', j)
-        for i in range(5999):
+        for i in range(6000):
             MM.update_price()
         kurt.append(sts.kurtosis(MM.return_t))
         skewness.append(sts.skew(MM.return_t))
@@ -416,7 +439,13 @@ def kurt_skew():
     print('Skewness: ', float("{0:.4f}".format(numpy.median(skewness))))
 
 
-""" Abs Returns as a function of time assumes return = a* time**b
+""" LONG RANGE dependency
+    Autocorrelation decay a function of time assumes return = time**(-a)
+    curve_fit(f, xdata, ydata)
+    Assumes ydata = f(xdata, *params) + eps
+
+    pars= Optimal values for the parameters so that the sum of the squared error of f(xdata, *popt) - ydata is minimized
+
     @return pars = Optimal values for the parameters so that the sum of the squared error of f(xdata, *pars) - ydata is minimized
     @return covar = the estimated covariance of pars. The diagonals provide the variance of the parameter estimate.
     @return err = compute one standard deviation errors (scaled) on the parameters u.
@@ -484,7 +513,6 @@ def power_fitting_time():
     print('sq param:' , sq_p)
     print('sq err: ',sq_e)
 
-power_fitting_time()
 
 """ Returns the exponent of a fitted PowerLaw distribution using Maximum Likelihood Method
     This estimator is equivalent to the Hill estimator+
@@ -498,14 +526,14 @@ def hill_index():
     alphas = []
     alphas95 = []
     alphas1 = []
-    for j in range(101):
-        MM = MarketMaker(0, 0, 0.5, 0.5)
+    for j in range(11):
+        MM = MarketMaker(1, 1, 0.5, 0.5)
         for i in range(8500 - 1):
             MM.update_price()
         abs_returns = [abs(x) for x in MM.return_t]
 
         rs = sorted(abs_returns)
-        xmin = 1.3929
+        xmin = 1.2658
         rs1 = [x for x in rs if x > xmin]
         n = len(rs1)
         sum = 0
@@ -543,13 +571,14 @@ def hill_index():
     print('Hill Index upper 5%: ', numpy.median(alphas95))
 
 
+
 """ Autocorrelation function plot for volume , raw,abs returns, S&P raw,abs returns
 """
 
 
 def autocorrelations():
-    MM = MarketMaker(0, 0, 0.5, 0.5)
-    for i in range(8500):
+    MM = MarketMaker(1, 1, 0.5, 0.5)
+    for i in range(6000):
         MM.update_price()
     abs_returns = [abs(x) for x in MM.return_t]
     squared_returns = [x ** 2 for x in MM.return_t]
@@ -606,7 +635,6 @@ def autocorrelations():
     plt.xlabel('lags')
     plt.ylabel('autocorrelation')
     plt.title('Volume autocorrelation function')
-    plt.ylim(-0.10, 0.10)
     plt.legend()
 
     sr = tsast.acf(squared_returns, nlags=100)
@@ -624,7 +652,7 @@ def autocorrelations():
 
     fitSq = powerlaw.Fit(sr)
     alphaSq = fitAbs.power_law.alpha
-    print('alpha abs: ', fitSq.power_law.alpha)
+    print('alpha squared: ', fitSq.power_law.alpha)
     pl_sequence_sq = powerlaw_sequence(100, exponent=alphaSq)
     pl_sequence_sq.sort(reverse=True)
     pl_sequence_sq = [x / 10 for x in pl_sequence_sq]
@@ -639,7 +667,6 @@ def autocorrelations():
     plt.ylabel('autocorrelation')
     plt.legend()
     plt.show()
-
 
 """ Anderson-Darling Test
     Works for exponential, normal, logistic, extreme 1 and Gumbel distributions
@@ -723,7 +750,7 @@ def hurst(X):
 
 
 def pp_plot(distribution):
-    MM = MarketMaker(0, 0, 0.5, 0.5)
+    MM = MarketMaker(1, 1, 0.5, 0.5)
     for i in range(5999):
         MM.update_price()
 
@@ -758,7 +785,7 @@ def pp_plot(distribution):
 
 
 def histograms():
-    MM = MarketMaker(0, 0, 0.5, 0.5)
+    MM = MarketMaker(1, 1, 0.5, 0.5)
     for i in range(5999):
         MM.update_price()
     abs_returns = [abs(x) for x in MM.return_t]
@@ -782,6 +809,21 @@ def histograms():
     plt.ylabel('Probability')
     plt.title(r'$\mathrm{Histogram\ of\ raw\ returns:}\ \mu=%.3f,\ \sigma=%.3f$' % (mu, sigma))
     plt.grid(True)
+
+    x=[]
+    for i in range(1,len(MM.pf)):
+        x.append((MM.pf[i]-MM.pf[i-1]))
+    plt.figure()
+    (mu, sigma) = sts.norm.fit(x)
+    # the histogram of the data
+     # normalized to form a probability density, i.e., n/(len(x)`dbin), i.e., the integral of the histogram will sum to 1
+    n, bins, patches = plt.hist(x, 100, normed=1, facecolor='green', alpha=0.75)
+    # add a 'best fit' line
+    y = mlab.normpdf(bins, mu, sigma)
+    l = plt.plot(bins, y, 'r--', linewidth=2)
+    plt.xlabel('difference in log pf')
+    plt.ylabel('Probability')
+    plt.title(r'$\mathrm{Histogram\ of\ pf\ returns:}\ \mu=%.3f,\ \sigma=%.3f$' % (mu, sigma))
 
     plt.figure()
     n, bins, patches = plt.hist(abs_returns, 100, normed=1, facecolor='green', alpha=0.75)
@@ -818,7 +860,7 @@ def histograms():
     plt.title(r'$\mathrm{Histogram\ of\ S&P\ abs\ returns:}\ \mu=%.3f,\ \sigma=%.3f$' % (mu, sigma))
 
     for i in range(1):
-        MM = MarketMaker(0, 0, 0.5, 0.5)
+        MM = MarketMaker(1, 1, 0.5, 0.5)
         for i in range(5999):
             MM.update_price()
 
@@ -840,18 +882,18 @@ def histograms():
 
 
 def crosscorrelations():
-    MM = MarketMaker(0, 0, 0.5, 0.5)
+    MM = MarketMaker(1, 1, 0.5, 0.5)
     for i in range(5999):
         MM.update_price()
     squared_returns = [x ** 2 for x in MM.return_t]
 
     # Leverage Effect
     plt.figure()
-    plt.xcorr(MM.volatility, MM.return_t, usevlines=False, linestyle='-')
+    plt.xcorr(MM.volatility, MM.return_t,maxlags=100, usevlines=True)
     plt.legend()
     plt.xlabel('Volatility(t) and Return(t+j)')
     plt.ylabel('cross correlation')
-    plt.xticks(range(-10, 11, 1))
+    plt.xticks(range(-100, 101, 10))
     plt.grid(True)
     plt.title('Leverage Effect')
     # b = tsast.ccf(MM.volume, MM.volatility)
@@ -938,7 +980,7 @@ def aggregational_gauss():
         price100 = []
         returns100 = []
 
-        MM = MarketMaker(0, 0, 0.5, 0.5)
+        MM = MarketMaker(1, 1, 0.5, 0.5)
         for i in range(5999):
             MM.update_price()
 
@@ -1000,20 +1042,21 @@ def aggregational_gauss():
 
 
 def adf():
+    MM = MarketMaker(1, 1, 0.5, 0.5)
+    for j in range(6000):
+        MM.update_price()
     s01 = 0
     s005 = 0
     p01 = 0
     p005 = 0
     n01 = 0
     n005 = 0
-    for i in range(11):
+    for i in range(101):
         print('iteration ', i)
-        MM = MarketMaker(0, 0, 0.5, 0.5)
+        MM = MarketMaker(1, 1, 0.5, 0.5)
         for j in range(6000):
             MM.update_price()
-
         t = tsast.adfuller(MM.price_t)
-        print(t)
         if t[0] < t[4]['10%']:
             s01 += 1
         if t[0] < t[4]['5%']:
@@ -1035,45 +1078,52 @@ def adf():
     print('adf < crit 5%: ', s005)
     print('p-val<0.1 and adf < crit 10%: ', n01)
     print('p-val<0.1 and adf < crit 10%: ', n005)
-    print(100 * (p01 + s01 - n01) / 10001, '% iteratons are stationary (90%)')
-    print(100 * (p005 + s005 - n005) / 10001, '% iteratons are stationary (95%)')
+    print(100 * (p01 + s01 - n01) / 101, '% iteratons are stationary (90%)')
+    print(100 * (p005 + s005 - n005) / 101, '% iteratons are stationary (95%)')
 
 
-"""Geometric Brownian Motion prices
-    delta is the duration in days between each generated price, and sigma and mu are annualised values - i.e. delta = 1.0 generates daily prices.
-"""
-def generate_gbm_prices():
-    periods=6000
-    start_price=1
-    mu=0.005
-    sigma=0.015
-    delta=1
-    DAYS_PER_YEAR = 252.0
-    t = delta / DAYS_PER_YEAR
-    prices = numpy.zeros(periods)
-    epsilon_sigma_t = numpy.random.normal(0, 1, periods - 1) * sigma * numpy.sqrt(t)
-    prices[0] = start_price
-    for i in range(1, len(prices)):
-        prices[i] = prices[i - 1] * \
-                    numpy.exp((mu - 0.5 * sigma ** 2) * t +
-                              epsilon_sigma_t[i - 1])
-    return prices
+#
+# prices=[]
+# prices.append(1)
+# mu=0.005
+# sigma=0.015
+# for i in range(6000):
+# prices.append(generate_next_gbm(prices[-1],mu,sigma))
+#
+# plt.figure()
+# prices=numpy.array(prices)
+# plt.plot(prices-1)
+# plt.show()
+#
 
-
-# MM = MarketMaker(0, 0, 0.5, 0.5)
+# MM=MarketMaker(1,1,0.5,0.5)
 # for i in range(6000):
 #     MM.update_price()
+# square_ret=[x**2 for x in MM.return_t]
+#
+#
+# plt.figure()
+# plt.plot(MM.volume)
+#
+# Vi=numpy.mean(MM.volume)
+# volume=[x-Vi for x in MM.volume]
+# volume=numpy.sort(volume)
+# plt.figure()
+# n, bins, patches = plt.hist(volume, 100, normed=1, facecolor='green', alpha=0.75)
+# plt.show()
+#
 # abs_returns = [abs(x) for x in MM.return_t]
 # f = open('return.txt', 'w')
-# for item in abs_returns:
+# for item in square_ret:
 #     f.write("%s\n" % float("{0:.4f}".format(item)))
 # f.close()
 #
 # g = open('price.txt', 'w')
-# for item in MM.price_t:
+# for item in MM.volume:
 #     g.write("%s\n" % float("{0:.4f}".format(item)))
 # g.close()
-
+# print(sts.kurtosis(MM.return_t))
+# print(sts.kurtosis(abs_returns))
 #
 # price_impact = numpy.sort(MM.price_t[2:])
 # volume = numpy.sort(MM.volume)
