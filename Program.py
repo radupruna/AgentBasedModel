@@ -484,8 +484,6 @@ def power_fitting_time():
     print('sq param:' , sq_p)
     print('sq err: ',sq_e)
 
-power_fitting_time()
-
 """ Returns the exponent of a fitted PowerLaw distribution using Maximum Likelihood Method
     This estimator is equivalent to the Hill estimator+
     @param returns
