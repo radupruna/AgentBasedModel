@@ -949,6 +949,7 @@ def histograms():
         s_p_abs = g.readlines()
     s_p_abs_returns = [100 * float(x) for x in s_p_abs]
 
+    """Raw Returns"""
     plt.figure()
     (mu, sigma) = sts.norm.fit(MM.return_t)
     # the histogram of the data
@@ -957,11 +958,12 @@ def histograms():
     # add a 'best fit' line
     y = mlab.normpdf(bins, mu, sigma)
     l = plt.plot(bins, y, 'r--', linewidth=2)
-    plt.xlabel('returns')
+    plt.xlabel('Raw Returns')
     plt.ylabel('Probability')
     plt.title(r'$\mathrm{Histogram\ of\ raw\ returns:}\ \mu=%.3f,\ \sigma=%.3f$' % (mu, sigma))
     plt.grid(True)
 
+    """Fundamental Price"""
     x = []
     for i in range(1, len(MM.pf)):
         x.append((MM.pf[i] - MM.pf[i - 1]))
@@ -973,26 +975,26 @@ def histograms():
     # add a 'best fit' line
     y = mlab.normpdf(bins, mu, sigma)
     l = plt.plot(bins, y, 'r--', linewidth=2)
-    plt.xlabel('difference in log pf')
+    plt.xlabel('Difference in log pf')
     plt.ylabel('Probability')
-    plt.title(r'$\mathrm{Histogram\ of\ pf\ returns:}\ \mu=%.3f,\ \sigma=%.3f$' % (mu, sigma))
+    plt.title(r'$\mathrm{Histogram\ of\ fundamental\ price\ returns:}\ \mu=%.3f,\ \sigma=%.3f$' % (mu, sigma))
 
-    plt.figure()
-    n, bins, patches = plt.hist(abs_returns, 100, normed=1, facecolor='green', alpha=0.75)
-    (mu, sigma) = sts.norm.fit(abs_returns)
-    plt.xlabel('volatility')
-    plt.ylabel('Probability')
-    plt.title(r'$\mathrm{Histogram\ of\ abs\ returns:}\ \mu=%.3f,\ \sigma=%.3f$' % (mu, sigma))
+    # plt.figure()
+    # n, bins, patches = plt.hist(abs_returns, 100, normed=1, facecolor='green', alpha=0.75)
+    # (mu, sigma) = sts.norm.fit(abs_returns)
+    # plt.xlabel('volatility')
+    # plt.ylabel('Probability')
+    # plt.title(r'$\mathrm{Histogram\ of\ abs\ returns:}\ \mu=%.3f,\ \sigma=%.3f$' % (mu, sigma))
 
-    # VOLUME
-    fit = powerlaw.Fit(MM.volume)
-    # Calculating best minimal value for power law fit
-    xmin = fit.xmin
-    alpha = fit.power_law.alpha
-    sigma = fit.power_law.sigma
-    D = fit.power_law.D
-
-    print(xmin,alpha)
+    # # VOLUME
+    # fit = powerlaw.Fit(MM.volume)
+    # # Calculating best minimal value for power law fit
+    # xmin = fit.xmin
+    # alpha = fit.power_law.alpha
+    # sigma = fit.power_law.sigma
+    # D = fit.power_law.D
+    # print(xmin,alpha)
+    """" Volume """
     plt.figure()
     n, bins, patches = plt.hist(MM.volume, 100, normed=1, facecolor='green', alpha=0.75)
 
@@ -1005,13 +1007,14 @@ def histograms():
     plt.plot(bins, lognorm(bins, pars_logn[0]), 'm', label='Log-Normal')
     plt.plot(bins, weibull_min(bins, pars_weibull[0]), 'r', label='Weibull')
     plt.plot(bins, gamma(bins, pars_gamma[0],pars_gamma[1]), 'b', label='Gamma ')
-    print(pars_gamma[0],pars_gamma[1])
+
     (mu, sigma) = sts.norm.fit(MM.volume)
     plt.xlabel('Volume')
     plt.ylabel('Probability')
     plt.title(r'$\mathrm{Histogram\ of\ volume}\ \mu=%.3f,\ \sigma=%.3f$' % (mu, sigma))
     plt.legend()
 
+    """ S&P Returns """
     plt.figure()
     (mu, sigma) = sts.norm.fit(s_p_raw_returns)
     # the histogram of the data
@@ -1031,34 +1034,21 @@ def histograms():
     plt.ylabel('Probability')
     plt.title(r'$\mathrm{Histogram\ of\ S&P\ abs\ returns:}\ \mu=%.3f,\ \sigma=%.3f$' % (mu, sigma))
 
-    for i in range(1):
-        MM = MarketMaker(1, 1, 0.5, 0.5)
-        for i in range(5999):
-            MM.update_price()
+    """ Abs Returns """
+    # a, n, c = sts.pareto.fit(abs_returns)
+    plt.figure()
+    count, bins, patches = plt.hist(abs_returns, 100, normed=1, facecolor='green', alpha=0.75, label='abs returns')
 
-        abs_returns = [abs(x) + 1 for x in MM.return_t if abs(x) > 0.0]
+    pars_power, covar_power = curve_fit(power, bins[:-1], count)
+    err_power = numpy.sqrt(numpy.diag(covar_power))
+    pars_exp, covar_exp = curve_fit(exponential, bins[:-1], count)
+    err_exp = numpy.sqrt(numpy.diag(covar_exp))
 
-        # a, n, c = sts.pareto.fit(abs_returns)
-        plt.figure()
-        count, bins, patches = plt.hist(abs_returns, 100, normed=1, facecolor='green', alpha=0.75, label='raw returns')
+    plt.plot(bins, power(bins, pars_power[0],pars_power[1]), 'k', label='powerlaw %.3f' % pars_power[1])
+    plt.plot(bins, exponential(bins, pars_exp[0]), 'm', label='exponential %.3f' % pars_exp[0])
 
-        pars_power, covar_power = curve_fit(power, bins[:-1], count)
-        err_power = numpy.sqrt(numpy.diag(covar_power))
-
-        pars_pareto, covar_pareto = curve_fit(pareto, bins[:-1], count)
-        err_pareto = numpy.sqrt(numpy.diag(covar_pareto))
-
-        pars_exp, covar_exp = curve_fit(exponential, bins[:-1], count)
-        err_exp = numpy.sqrt(numpy.diag(covar_exp))
-
-        plt.plot(bins, power(bins, pars_power[0],pars_power[1]), 'k', label='powerlaw %.3f' % pars_power[1])
-        plt.plot(bins, pareto(bins, pars_pareto[0]), 'r', label='pareto %.3f' % pars_pareto[0])
-        plt.plot(bins, exponential(bins, pars_exp[0]), 'm', label='exponential %.3f' % pars_exp[0])
-        # fit = a * n * a / bins ** (a + 1)
-        # plt.plot(bins + 1, max(count) * fit / ((max(fit)) * (len(bins)) * (a + 1.2)), linewidth=2, color='r',
-        #          label='pareto dist')
-        plt.title('Raw returns vs Distributions')
-        plt.legend()
+    plt.title('Abs Returns vs Distributions')
+    plt.legend()
 
     plt.show()
 
@@ -1270,20 +1260,22 @@ def aggregational_gauss():
 
 
 def price_impact():
-    def power(x,c):
+    def log(x,c):
         return (c*numpy.log(x))
-    def lognorm(x,s):
-        return (1 / (s*x*numpy.sqrt(2*numpy.pi)) * numpy.exp(-1/2*(numpy.log(x)/s)**2))
+    def power(x,c,s):
+        return c*x**s
 
     MM=MarketMaker(1,1,0.5,0.5)
     for i in range(6000):
         MM.update_price()
     square_ret=[x**2 for x in MM.return_t]
     abs_return=[abs(x) for x in MM.return_t]
-    n, bins, patches = plt.hist(MM.volume, 100, normed=1, facecolor='green', alpha=0.75)
+
     volume= numpy.sort(MM.volume)
     price=numpy.sort(MM.price_t[2:])
 
+    # n, bins, patches = plt.hist(MM.volume, 100, normed=1, facecolor='green', alpha=0.75)
+    #
     # plt.figure()
     # plt.plot(numpy.sort(MM.volume),numpy.sort(MM.return_t))
     # plt.xlabel('volume')
@@ -1295,9 +1287,10 @@ def price_impact():
     # plt.xlabel('Volume(t) and Price(t+j')
     # plt.title('Cross-correlation')
 
-    pars_power, covar_power = curve_fit(lognorm,volume,price)
-    err_power = numpy.sqrt(numpy.diag(covar_power))
-    print(err_power)
+    pars_log, covar_log = curve_fit(log,volume,price)
+    err_log = numpy.sqrt(numpy.diag(covar_log))
+    pars_power, covar_power = curve_fit(power,volume,price)
+    err_power = numpy.sqrt(numpy.diag(covar_log))
     plt.figure()
     plt.plot(volume, price)
     plt.xlabel('volume')
@@ -1306,15 +1299,18 @@ def price_impact():
 
     plt.figure()
     plt.plot(volume,price)
-    plt.plot(volume,lognorm(volume, pars_power[0]), label='lognorm')
-
-    print(pars_power[0])
-
+    # plt.plot(volume,log(volume, pars_log[0]), label='log')
+    plt.plot(volume,power(volume, pars_power[0],pars_power[1]), label='power %.3f'%pars_power[1])
+    # plt.plot(volume, numpy.log(volume))
+    plt.xlabel('volume')
+    plt.ylabel('price')
+    plt.title('Price Impact')
     plt.legend()
+
     plt.show()
 
 
-histograms()
+price_impact()
 #
 # prices=[]
 # prices.append(1)
