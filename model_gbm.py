@@ -92,11 +92,12 @@ class MarketMaker:
         self.df = []  # Demands of Fundamentalists
         self.dc = []  # Demands of Chartists
         self.volume = []
+        self.volume1 = []
         self.attract = []  # Attractiveness Levels
         self.return_t = []  # Returns
         self.volatility = []
 
-        pf_0=1
+        pf_0 = 1
         self.pf.append(pf_0)
         self.price_t.append(p_0)
         self.price_t.append(p_1)
@@ -138,8 +139,8 @@ class MarketMaker:
         self.attract.append(a)
         self.update_fractions(a)
 
-        m = 0.02 #drift
-        sig = 0.075 #volatility
+        m = 0.02  # drift
+        sig = 0.075  # volatility
         fund_price = generate_next_gbm(self.pf[-1], m, sig)
         self.pf.append(fund_price)
 
@@ -217,9 +218,10 @@ def adf():
     print(100 * (p01 + s01 - n01) / 101, '% iteratons are stationary (90%)')
     print(100 * (p005 + s005 - n005) / 101, '% iteratons are stationary (95%)')
     plt.figure()
-    plt.plot(MM.price_t,'r')
-    plt.plot(MM.pf,'b')
+    plt.plot(MM.price_t, 'r')
+    plt.plot(MM.pf, 'b')
     plt.show()
+
 
 """ Fit a powerlaw distribution p(x) = x^-alpha to simulated data and S&P 500 data.
     Plot multiple local minima of Kolmogorov-Smirnov distance D across xmin.
@@ -235,7 +237,7 @@ def powerlaw_fit():
     Ds = []
 
     # with open('abs_returns.txt') as g:
-    #     s_p_abs = g.readlines()
+    # s_p_abs = g.readlines()
     # s_p_abs_returns = [float(x) for x in s_p_abs if float(x) > 0]
     # s_p_squared_returns = [x ** 2 for x in s_p_abs_returns]
     # d = tsast.acf(s_p_squared_returns, nlags=99)
@@ -298,6 +300,7 @@ def powerlaw_fit():
     R>0 if the data is more likely in the first distribution, R<0 if the data is more likely in the second distribution.
     @return p the significance value for that direction
 """
+
 
 def distibution_compare():
     R_pw_exps = []
@@ -500,20 +503,23 @@ def kurt_skew():
 
 
 def power_fitting_time():
-    def powerlaw(x, a):
-        return (x**(-a))
-    def pareto(x,a):
-        return a/(x**(a+1))
-    def exponential(x,a):
-        return numpy.exp(x*(-a))
-    abs_par=[]
-    abs_err=[]
-    sq_par=[]
-    sq_err=[]
+    def power(x, c,a):
+        return (c*x ** (-a))
+
+    def pareto(x, a):
+        return a / (x ** (a + 1))
+
+    def exponential(x, a):
+        return numpy.exp(x * (-a))
+
+    abs_par = []
+    abs_err = []
+    sq_par = []
+    sq_err = []
     t = numpy.linspace(1, 100, 100)
     t1 = numpy.linspace(1, 6000, 6000)
     # with open('raw_returns.txt') as f:
-    #     s_p_raw = f.readlines()
+    # s_p_raw = f.readlines()
     # with open('abs_returns.txt') as g:
     #     s_p_abs = g.readlines()
     # s_p_raw_returns = [float(x) for x in s_p_raw]
@@ -531,7 +537,7 @@ def power_fitting_time():
     # print(sp_sq_pars,sp_sq_err)
 
     for j in range(11):
-        print('iteration ',j)
+        print('iteration ', j)
         MM = MarketMaker(1, 1, 0.5, 0.5)
         for i in range(6000):
             MM.update_price()
@@ -540,7 +546,7 @@ def power_fitting_time():
         squared_returns = [x ** 2 for x in MM.return_t]
 
         a = tsast.acf(abs_returns, nlags=99)
-        pars_power, covar_power = curve_fit(powerlaw, t, a)
+        pars_power, covar_power = curve_fit(power, t, a)
         err_power = numpy.sqrt(numpy.diag(covar_power))
 
         pars_pareto, covar_pareto = curve_fit(pareto, t, a)
@@ -559,9 +565,9 @@ def power_fitting_time():
         plt.title('Returns autocorrelation function')
         plt.xlabel('lags')
         plt.ylabel('autocorrelation')
-        plt.plot(powerlaw(t,pars_power[0]),label='powerlaw %.3f' %pars_power[0])
-        plt.plot(pareto(t,pars_pareto[0])+0.2,label='pareto %.3f' %pars_pareto[0])
-        plt.plot(exponential(t,pars_exp[0])+0.1,'r',label='exponential %.3f' %pars_exp[0])
+        plt.plot(power(t, pars_power[0],pars_power[1]), label='powerlaw %.3f' % pars_power[1])
+        plt.plot(pareto(t, pars_pareto[0]) + 0.2, label='pareto %.3f' % pars_pareto[0])
+        plt.plot(exponential(t, pars_exp[0]) + 0.1, 'r', label='exponential %.3f' % pars_exp[0])
         plt.legend()
         plt.show()
 
@@ -580,15 +586,14 @@ def power_fitting_time():
     abs_p = numpy.median(abs_par)
     ind = abs_par.index(abs_p)
     abs_e = abs_err[ind]
-    print('abs param:' , abs_p)
-    print('abs err: ',abs_e)
+    print('abs param:', abs_p)
+    print('abs err: ', abs_e)
 
     sq_p = numpy.median(sq_par)
     ind = sq_par.index(sq_p)
     sq_e = sq_err[ind]
-    print('sq param:' , sq_p)
-    print('sq err: ',sq_e)
-
+    print('sq param:', sq_p)
+    print('sq err: ', sq_e)
 
 
 """ Returns the exponent of a fitted PowerLaw distribution using Maximum Likelihood Method
@@ -648,12 +653,14 @@ def hill_index():
     print('Hill Index upper 5%: ', numpy.median(alphas95))
 
 
-
 """ Autocorrelation function plot for volume , raw,abs returns, S&P raw,abs returns
 """
 
 
 def autocorrelations():
+    def power(x,c, a):
+        return (c*x ** (-a))
+    t=numpy.linspace(1, 100, 100)
     MM = MarketMaker(1, 1, 0.5, 0.5)
     for i in range(6000):
         MM.update_price()
@@ -704,8 +711,14 @@ def autocorrelations():
     plt.ylabel('autocorrelation')
     plt.legend()
 
-    v = tsast.acf(MM.volume, nlags=10)
+    v = tsast.acf(MM.volume, nlags=99)
+    fitV = powerlaw.Fit(v)
+    alphaV = fitV.power_law.alpha
+    betaV=1/alphaV
+    vol_power, vol_corr = curve_fit(power, t, v)
     plt.figure()
+    plt.plot(power(t, vol_power[0],vol_power[1]), label='power %.3f' % vol_power[1])
+    plt.plot(power(t, vol_power[0],betaV), label='power beta %.3f' % betaV)
     plt.plot(v, label='volume')
     plt.axhline(0, 0, 1, color='black', ls='dotted', lw=1)
     plt.grid(True)
@@ -714,8 +727,8 @@ def autocorrelations():
     plt.title('Volume autocorrelation function')
     plt.legend()
 
-    sr = tsast.acf(squared_returns, nlags=100)
-    spsr = tsast.acf(s_p_squared_returns, nlags=100)
+    sr = tsast.acf(squared_returns, nlags=99)
+    spsr = tsast.acf(s_p_squared_returns, nlags=99)
     plt.figure()
     plt.ylim(-0.1, 0.4)
     plt.plot(sr, 'r', label='squared returns')
@@ -737,26 +750,47 @@ def autocorrelations():
     plt.ylabel('autocorrelation')
     plt.legend()
 
-
     fitSq = powerlaw.Fit(sr)
-    alphaSq = fitAbs.power_law.alpha
+    alphaSq = fitSq.power_law.alpha
     print('alpha squared: ', fitSq.power_law.alpha)
-    pl_sequence_sq = powerlaw_sequence(100, exponent=alphaSq)
-    pl_sequence_sq.sort(reverse=True)
-    pl_sequence_sq = [x / 10 for x in pl_sequence_sq]
+
+    sq_power, covar_power = curve_fit(power, t, sr)
+    err_power = numpy.sqrt(numpy.diag(covar_power))
 
     plt.figure()
     betaSq = 1 / alphaSq
+    plt.plot(power(t, sq_power[0],sq_power[1]), label='power %.3f' % sq_power[1])
+    plt.plot(power(t, sq_power[0],betaSq), label='power law %.3f' % betaSq)
     plt.plot(sr, 'r', label='squared returns')
     plt.plot(spsr, 'r--', label='S&P squared returns')
-    plt.plot(pl_sequence_sq, label='shifted power law beta = %f' % betaSq)
     plt.title('Squared returns autocorrelation decay')
     plt.xlabel('lags')
     plt.ylabel('autocorrelation')
     plt.legend()
 
-    plt.show()
 
+    pars_power, covar_power = curve_fit(power, t, a)
+    err_power = numpy.sqrt(numpy.diag(covar_power))
+    plt.figure()
+    # pl_sequence = powerlaw_sequence(100, exponent=pars_power[0])
+    # pl_sequence.sort(reverse=True)
+    # plt.plot(pl_sequence,label='pl sequence %.3f' %pars_power[0])
+    # pl_sequence_1 = powerlaw_sequence(100, exponent=beta)
+    # pl_sequence_1.sort(reverse=True)
+    # plt.plot(pl_sequence_1,label='pl sequence 1 %.3f' %beta)
+    plt.plot(power(t, pars_power[0],0.3), label='powerlaw 0.3')
+    plt.plot(power(t, pars_power[0],beta), label='powerlaw beta %.3f' %beta)
+    plt.plot(power(t, pars_power[0],pars_power[1]), label='power %.3f' % pars_power[1])
+    plt.plot(a, 'r', label='abs returns')
+    plt.plot(d, 'r--', label='S&P abs returns')
+    plt.axhline(0, 0, 1, color='black', ls='dotted', lw=1)
+    plt.grid(True)
+    plt.title('Returns autocorrelation function')
+    plt.xlabel('lags')
+    plt.ylabel('autocorrelation')
+    plt.legend()
+
+    plt.show()
 
 
 """ Anderson-Darling Test
@@ -842,7 +876,7 @@ def hurst(X):
 #
 # MM=MarketMaker(1,1,0.5,0.5)
 # for i in range(6000):
-#     MM.update_price()
+# MM.update_price()
 # square_ret=[x**2 for x in MM.return_t]
 # abs_returns = [abs(x) for x in MM.return_t]
 #
@@ -879,17 +913,29 @@ def pp_plot(distribution):
 
     plt.show()
 
+
 """ Creates histogram plots for the simulated and empirical data
 """
 
 
 def histograms():
-    def powerlaw(x, a):
-        return (x**(-a))
-    def pareto(x,a):
-        return a/(x**(a+1))
-    def exponential(x,a):
-        return numpy.exp(x*(-a))
+    def power(x,c, a):
+        return (c*x ** (-a))
+
+    def pareto(x, a):
+        return a / (x ** (a + 1))
+
+    def exponential(x, a):
+        return numpy.exp(x * (-a))
+
+    def lognorm(x,s):
+        return (1 / (s*x*numpy.sqrt(2*numpy.pi)) * numpy.exp(-1/2*(numpy.log(x)/s)**2))
+
+    def weibull_min(x, c):
+        return ( c * x**(c-1) * numpy.exp(-x**c))
+
+    def gamma(x,lam, a):
+        return(lam**a * x**(a-1) * numpy.exp(-lam*x) / scipy.special.gamma(a))
 
     MM = MarketMaker(1, 1, 0.5, 0.5)
     for i in range(5999):
@@ -916,13 +962,13 @@ def histograms():
     plt.title(r'$\mathrm{Histogram\ of\ raw\ returns:}\ \mu=%.3f,\ \sigma=%.3f$' % (mu, sigma))
     plt.grid(True)
 
-    x=[]
-    for i in range(1,len(MM.pf)):
-        x.append((MM.pf[i]-MM.pf[i-1]))
+    x = []
+    for i in range(1, len(MM.pf)):
+        x.append((MM.pf[i] - MM.pf[i - 1]))
     plt.figure()
     (mu, sigma) = sts.norm.fit(x)
     # the histogram of the data
-     # normalized to form a probability density, i.e., n/(len(x)`dbin), i.e., the integral of the histogram will sum to 1
+    # normalized to form a probability density, i.e., n/(len(x)`dbin), i.e., the integral of the histogram will sum to 1
     n, bins, patches = plt.hist(x, 100, normed=1, facecolor='green', alpha=0.75)
     # add a 'best fit' line
     y = mlab.normpdf(bins, mu, sigma)
@@ -938,13 +984,33 @@ def histograms():
     plt.ylabel('Probability')
     plt.title(r'$\mathrm{Histogram\ of\ abs\ returns:}\ \mu=%.3f,\ \sigma=%.3f$' % (mu, sigma))
 
+    # VOLUME
+    fit = powerlaw.Fit(MM.volume)
+    # Calculating best minimal value for power law fit
+    xmin = fit.xmin
+    alpha = fit.power_law.alpha
+    sigma = fit.power_law.sigma
+    D = fit.power_law.D
+
+    print(xmin,alpha)
     plt.figure()
     n, bins, patches = plt.hist(MM.volume, 100, normed=1, facecolor='green', alpha=0.75)
+
+    pars_power, covar_power = curve_fit(power, bins[:-1], n)
+    pars_logn, covar_logn = curve_fit(lognorm, bins[:-1], n)
+    pars_weibull, covar_weibull = curve_fit(weibull_min, bins[:-1], n)
+    pars_gamma, covar_gamma = curve_fit(gamma, bins[:-1], n)
+
+    plt.plot(bins, power(bins, pars_power[0],pars_power[1]), 'k', label='Powerlaw')
+    plt.plot(bins, lognorm(bins, pars_logn[0]), 'm', label='Log-Normal')
+    plt.plot(bins, weibull_min(bins, pars_weibull[0]), 'r', label='Weibull')
+    plt.plot(bins, gamma(bins, pars_gamma[0],pars_gamma[1]), 'b', label='Gamma ')
+    print(pars_gamma[0],pars_gamma[1])
     (mu, sigma) = sts.norm.fit(MM.volume)
     plt.xlabel('Volume')
     plt.ylabel('Probability')
     plt.title(r'$\mathrm{Histogram\ of\ volume}\ \mu=%.3f,\ \sigma=%.3f$' % (mu, sigma))
-    print(numpy.mean(MM.volume), numpy.std(MM.volume))
+    plt.legend()
 
     plt.figure()
     (mu, sigma) = sts.norm.fit(s_p_raw_returns)
@@ -976,7 +1042,7 @@ def histograms():
         plt.figure()
         count, bins, patches = plt.hist(abs_returns, 100, normed=1, facecolor='green', alpha=0.75, label='raw returns')
 
-        pars_power, covar_power = curve_fit(powerlaw,bins[:-1], count)
+        pars_power, covar_power = curve_fit(power, bins[:-1], count)
         err_power = numpy.sqrt(numpy.diag(covar_power))
 
         pars_pareto, covar_pareto = curve_fit(pareto, bins[:-1], count)
@@ -985,9 +1051,9 @@ def histograms():
         pars_exp, covar_exp = curve_fit(exponential, bins[:-1], count)
         err_exp = numpy.sqrt(numpy.diag(covar_exp))
 
-        plt.plot(bins,powerlaw(bins,pars_power[0]),'k',label='powerlaw %.3f' %pars_power[0])
-        plt.plot(bins,pareto(bins,pars_pareto[0]),'r',label='pareto %.3f' %pars_pareto[0])
-        plt.plot(bins,exponential(bins,pars_exp[0]),'m',label='exponential %.3f' %pars_exp[0])
+        plt.plot(bins, power(bins, pars_power[0],pars_power[1]), 'k', label='powerlaw %.3f' % pars_power[1])
+        plt.plot(bins, pareto(bins, pars_pareto[0]), 'r', label='pareto %.3f' % pars_pareto[0])
+        plt.plot(bins, exponential(bins, pars_exp[0]), 'm', label='exponential %.3f' % pars_exp[0])
         # fit = a * n * a / bins ** (a + 1)
         # plt.plot(bins + 1, max(count) * fit / ((max(fit)) * (len(bins)) * (a + 1.2)), linewidth=2, color='r',
         #          label='pareto dist')
@@ -1018,71 +1084,91 @@ def crosscorrelations():
     s_p_sqr_returns = [100 * (float(x) ** 2) for x in s_p_raw]
 
     # Leverage Effect
-    plt.figure()
-    plt.xcorr(s_p_raw_returns,s_p_abs_returns, usevlines=True, linestyle='-', label='S&P data')
-    plt.legend()
-    plt.xlabel('Returns(t) and Volatility(t+j)')
-    plt.ylabel('cross correlation')
-    plt.title('Leverage Effect')
-    plt.xticks(range(-10, 11, 1))
-    plt.grid(True)
+    # plt.figure()
+    # plt.xcorr(s_p_raw_returns,s_p_abs_returns, usevlines=True, linestyle='-', label='S&P data')
+    # plt.legend()
+    # plt.xlabel('Returns(t) and Volatility(t+j)')
+    # plt.ylabel('cross correlation')
+    # plt.title('Leverage Effect')
+    # plt.xticks(range(-10, 11, 1))
+    # plt.grid(True)
+    #
+    # plt.figure()
+    # plt.xcorr(s_p_raw_returns,s_p_sqr_returns, usevlines=True, linestyle='-', label='S&P data')
+    # plt.legend()
+    # plt.xlabel('Returns(t) and Squared Returns(t+j)')
+    # plt.ylabel('cross correlation')
+    # plt.title('Leverage Effect')
+    # plt.xticks(range(-10, 11, 1))
+    # plt.grid(True)
 
-    plt.figure()
-    plt.xcorr(s_p_raw_returns,s_p_sqr_returns, usevlines=True, linestyle='-', label='S&P data')
-    plt.legend()
-    plt.xlabel('Returns(t) and Squared Returns(t+j)')
-    plt.ylabel('cross correlation')
-    plt.title('Leverage Effect')
-    plt.xticks(range(-10, 11, 1))
-    plt.grid(True)
+    # plt.figure()
+    # plt.xcorr(MM.return_t, abs_returns,maxlags=50, usevlines=True,label='Simulated Data')
+    # plt.legend()
+    # plt.xlabel('Returns(t) and Volatility(t+j)')
+    # plt.ylabel('cross correlation')
+    # plt.xticks(range(-50, 51, 10))
+    # plt.grid(True)
+    # plt.title('Leverage Effect')
 
-    plt.figure()
-    plt.xcorr(MM.return_t, abs_returns, usevlines=True,label='Simulated Data')
-    plt.legend()
-    plt.xlabel('Returns(t) and Volatility(t+j)')
-    plt.ylabel('cross correlation')
-    plt.xticks(range(-10, 11, 1))
-    plt.grid(True)
-    plt.title('Leverage Effect')
+    # plt.figure()
+    # plt.xcorr(MM.return_t, squared_returns, usevlines=True,label='Simulated Data')
+    # plt.legend()
+    # plt.xlabel('Returns(t) and Squared Returns(t+j)')
+    # plt.ylabel('cross correlation')
+    # plt.xticks(range(-10, 11, 1))
+    # plt.grid(True)
+    # plt.title('Leverage Effect')
 
-    plt.figure()
-    plt.xcorr(MM.return_t, squared_returns, usevlines=True,label='Simulated Data')
-    plt.legend()
-    plt.xlabel('Returns(t) and Squared Returns(t+j)')
-    plt.ylabel('cross correlation')
-    plt.xticks(range(-10, 11, 1))
-    plt.grid(True)
-    plt.title('Leverage Effect')
+    # plt.figure()
+    # plt.xcorr(abs_returns, MM.return_t, usevlines=True,label='Simulated Data')
+    # plt.legend()
+    # plt.xlabel('Volatility(t) and Price(t+j)')
+    # plt.ylabel('cross correlation')
+    # plt.xticks(range(-10, 11, 1))
+    # plt.grid(True)
+    # plt.title('Leverage Effect')
+
+    # plt.figure()
+    # plt.xcorr(abs_returns, abs_returns,maxlags=50, usevlines=True,label='Simulated Data')
+    # plt.legend()
+    # plt.xlabel('Volatility(t) and Volatility(t+j)')
+    # plt.ylabel('cross correlation')
+    # plt.xticks(range(-50, 51, 10))
+    # plt.grid(True)
+
     # b = tsast.ccf(MM.volume, MM.volatility)
     # plt.figure()
     # plt.plot(b)
     # plt.xlabel('volume(t) and volatility(t+j)')
     # plt.ylabel('cross correlation')
-    plt.figure()
-    plt.xcorr(MM.volatility, MM.volume, usevlines=False, linestyle='-')
-    plt.xlabel('Volatility(t) and Volume(t+j)')
-    plt.ylabel('cross correlation')
-    plt.xticks(range(-10, 11, 1))
-    plt.grid(True)
-
-    plt.figure()
-    plt.xcorr(squared_returns, MM.volume, usevlines=False, linestyle='-')
-    plt.xlabel('Squared Returns(t) and Volume(t+j)')
-    plt.ylabel('cross correlation')
-    plt.xticks(range(-10, 11, 1))
-    plt.grid(True)
+    #
+    # plt.figure()
+    # plt.xcorr(MM.volatility, MM.volume, usevlines=False, linestyle='-')
+    # plt.xlabel('Volatility(t) and Volume(t+j)')
+    # plt.ylabel('cross correlation')
+    # plt.xticks(range(-10, 11, 1))
+    # plt.grid(True)
+    #
+    # plt.figure()
+    # plt.xcorr(squared_returns, MM.volume, usevlines=False, linestyle='-')
+    # plt.xlabel('Squared Returns(t) and Volume(t+j)')
+    # plt.ylabel('cross correlation')
+    # plt.xticks(range(-10, 11, 1))
+    # plt.grid(True)
+    #
     # c = tsast.ccf(MM.volume, MM.return_t)
     # plt.figure()
     # plt.plot(c)
     # plt.xlabel('volume(t) and returns(t+j)')
     # plt.ylabel('cross correlation')
-    plt.figure()
-    plt.xcorr(MM.return_t, MM.volume, usevlines=False, linestyle='-')
-    plt.xlabel('Returns(t) and Volume(t+j)')
-    plt.ylabel('cross correlation')
-    plt.xticks(range(-10, 11, 1))
-    plt.grid(True)
-
+    #
+    # plt.figure()
+    # plt.xcorr(MM.return_t, MM.volume, usevlines=False, linestyle='-')
+    # plt.xlabel('Returns(t) and Volume(t+j)')
+    # plt.ylabel('cross correlation')
+    # plt.xticks(range(-10, 11, 1))
+    # plt.grid(True)
 
     # e = tsast.ccf(squared_returns, MM.return_t)
     # plt.figure()
@@ -1096,9 +1182,8 @@ def crosscorrelations():
     # plt.xlabel('volatility and return')
     # plt.ylabel('cross correlation')
 
-
     plt.show()
-crosscorrelations()
+
 """ Aggregational Gaussainity - increase time over which returns are calculated their dist looks more and more
     like a normal distribution.
     In particular, the shape of the dist is not the same at different time scales
@@ -1184,6 +1269,52 @@ def aggregational_gauss():
     print('Skewness 100: ', float("{0:.4f}".format(numpy.median(skew100))))
 
 
+def price_impact():
+    def power(x,c):
+        return (c*numpy.log(x))
+    def lognorm(x,s):
+        return (1 / (s*x*numpy.sqrt(2*numpy.pi)) * numpy.exp(-1/2*(numpy.log(x)/s)**2))
+
+    MM=MarketMaker(1,1,0.5,0.5)
+    for i in range(6000):
+        MM.update_price()
+    square_ret=[x**2 for x in MM.return_t]
+    abs_return=[abs(x) for x in MM.return_t]
+    n, bins, patches = plt.hist(MM.volume, 100, normed=1, facecolor='green', alpha=0.75)
+    volume= numpy.sort(MM.volume)
+    price=numpy.sort(MM.price_t[2:])
+
+    # plt.figure()
+    # plt.plot(numpy.sort(MM.volume),numpy.sort(MM.return_t))
+    # plt.xlabel('volume')
+    # plt.ylabel('change in price')
+    # plt.title('Price Impact')
+    #
+    # plt.figure()
+    # plt.xcorr( MM.volume,MM.price_t[2:],maxlags=50, usevlines=False, linestyle='-')
+    # plt.xlabel('Volume(t) and Price(t+j')
+    # plt.title('Cross-correlation')
+
+    pars_power, covar_power = curve_fit(lognorm,volume,price)
+    err_power = numpy.sqrt(numpy.diag(covar_power))
+    print(err_power)
+    plt.figure()
+    plt.plot(volume, price)
+    plt.xlabel('volume')
+    plt.ylabel('price')
+    plt.title('Price Impact')
+
+    plt.figure()
+    plt.plot(volume,price)
+    plt.plot(volume,lognorm(volume, pars_power[0]), label='lognorm')
+
+    print(pars_power[0])
+
+    plt.legend()
+    plt.show()
+
+
+histograms()
 #
 # prices=[]
 # prices.append(1)
@@ -1198,14 +1329,7 @@ def aggregational_gauss():
 # plt.show()
 #
 
-# MM=MarketMaker(1,1,0.5,0.5)
-# for i in range(6000):
-#     MM.update_price()
-# square_ret=[x**2 for x in MM.return_t]
-#
-#
-# plt.figure()
-# plt.plot(MM.volume)
+
 #
 # Vi=numpy.mean(MM.volume)
 # volume=[x-Vi for x in MM.volume]
